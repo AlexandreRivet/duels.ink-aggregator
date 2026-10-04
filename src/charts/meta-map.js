@@ -1,10 +1,11 @@
 /**
- * "Carte du méta" (meta map): one dot per deck, play rate across, win rate up, with the 95%
- * confidence interval as a vertical bar. The 50% line and the median play rate split it into
- * quadrants: popular and strong (top right), rarely played but strong (top left), etc.
+ * "Carte du méta" (meta map): one dot per deck, play rate across, win rate up, with an arrow
+ * from where the deck stood the previous week. The 50% line and the median play rate split it
+ * into quadrants: popular and strong (top right), rarely played but strong (top left), etc.
+ * Dot colour: win rate significantly above / below 50% (the intervals are in the meta table).
  */
 import { max, median, min, scaleLinear } from 'd3';
-import { formatCount, formatDelta, formatPct, formatWeekRange } from '../lib/format.js';
+import { formatCount, formatPct, formatWeekRange } from '../lib/format.js';
 import { deckName } from '../lib/inks.js';
 import {
   PAD,
@@ -27,12 +28,12 @@ const overlaps = (a, b) => a.x0 < b.x1 - 1 && b.x0 < a.x1 - 1 && a.y0 < b.y1 - 1
 
 /**
  * Places one label per dot (decks sharing a position share a label) on the side — right, left,
- * above, below, then the four diagonals — that stays in the plot with the fewest collisions: labels already placed weigh
- * most, then dots, then interval bars. Most played decks are placed first.
+ * above, below, then the four diagonals — that stays in the plot with the fewest collisions:
+ * labels already placed weigh most, then dots, then arrows. Most played decks are placed first.
  */
 function placeLabels(groups, bounds) {
   const dots = groups.map((g) => ({ x0: g.x - 7, x1: g.x + 7, y0: g.y - 7, y1: g.y + 7 }));
-  const bars = groups.flatMap((g) => g.bars);
+  const marks = groups.flatMap((g) => g.marks);
   const labels = [];
   const placed = new Map();
   for (const g of [...groups].sort((a, b) => b.playRate - a.playRate)) {
@@ -50,15 +51,26 @@ function placeLabels(groups, bounds) {
       right(g.x + 6, g.y + 12),
       left(g.x - 6, g.y - 11),
       left(g.x - 6, g.y + 12),
+      // Further away, with a leader line: only when everything close by is taken
+      ...[
+        centred(g.x, g.y - 26),
+        centred(g.x, g.y + 28),
+        right(g.x + 14, g.y - 20),
+        left(g.x - 14, g.y - 20),
+        right(g.x + 14, g.y + 20),
+        left(g.x - 14, g.y + 20),
+      ].map((c) => ({ ...c, far: true })),
     ].map((c) => ({ ...c, y0: c.y - h / 2, y1: c.y + h / 2 }));
     const inside = candidates.filter(
       (c) => c.x0 >= bounds.x0 && c.x1 <= bounds.x1 && c.y0 >= bounds.y0 && c.y1 <= bounds.y1,
     );
     const ownDot = dots[groups.indexOf(g)];
     const cost = (c) =>
+      (c.far ? 3 : 0) +
       10 * labels.filter((box) => overlaps(c, box)).length +
       5 * dots.filter((box) => box !== ownDot && overlaps(c, box)).length +
-      bars.filter((box) => overlaps(c, box)).length;
+      // An arrow counts once however much of it the label covers
+      new Set(marks.filter((box) => overlaps(c, box)).map((box) => box.arrow)).size;
     // Stable sort: on equal cost, the earlier side (right first) wins.
     const choice = (inside.length ? inside : candidates)
       .map((c) => ({ c, cost: cost(c) }))
@@ -77,10 +89,10 @@ export function metaMapChart(report, { document, theme, width = 800 }) {
   const top =
     header(svg, {
       title,
-      subtitle: `Popularité et win rate de la semaine · ${report.queueName} · ${formatWeekRange(
+      subtitle: `${report.queueName} · ${formatWeekRange(
         week.startDate,
         week.endDate,
-      )}`,
+      )} · flèche : depuis la semaine précédente`,
       theme,
     }) + 28;
 
@@ -92,19 +104,13 @@ export function metaMapChart(report, { document, theme, width = 800 }) {
 
   const plot = { x0: PAD + LEFT, x1: width - PAD, y0: top, y1: top + PLOT_HEIGHT };
   const x = scaleLinear()
-    .domain([0, max(decks, (d) => d.playRate) * 1.05])
+    .domain([0, max(decks, (d) => Math.max(d.playRate, d.previous?.playRate ?? 0)) * 1.05])
     .nice()
     .range([plot.x0, plot.x1]);
   const y = scaleLinear()
     .domain([
-      Math.min(
-        48,
-        min(decks, (d) => d.ci[0]),
-      ),
-      Math.max(
-        52,
-        max(decks, (d) => d.ci[1]),
-      ),
+      Math.min(48, min(decks, (d) => Math.min(d.winRate, d.previous?.winRate ?? 100)) - 1),
+      Math.max(52, max(decks, (d) => Math.max(d.winRate, d.previous?.winRate ?? 0)) + 1),
     ])
     .nice()
     .range([plot.y1, plot.y0])
@@ -191,34 +197,79 @@ export function metaMapChart(report, { document, theme, width = 800 }) {
     deck,
     x: x(deck.playRate),
     y: y(deck.winRate),
+    from: deck.previous ? { x: x(deck.previous.playRate), y: y(deck.previous.winRate) } : null,
     label: deckName(deck.colors),
   }));
+
+  /** Small boxes along a deck's arrow, so labels can avoid it. */
+  const arrowMarks = (p) => {
+    if (!p.from) return [];
+    const length = Math.hypot(p.x - p.from.x, p.y - p.from.y);
+    const steps = Math.floor(length / 6);
+    return Array.from({ length: steps + 1 }, (_, k) => {
+      const t = steps ? k / steps : 0;
+      const mx = p.from.x + (p.x - p.from.x) * t;
+      const my = p.from.y + (p.y - p.from.y) * t;
+      return { x0: mx - 2, x1: mx + 2, y0: my - 2, y1: my + 2, arrow: p };
+    });
+  };
 
   // Tiny samples put several decks on the same spot (0 % or 100 %): one label for all of them.
   const groups = [];
   for (const p of points) {
     const group = groups.find((g) => Math.abs(g.x - p.x) < 2 && Math.abs(g.y - p.y) < 2);
-    const bar = { x0: p.x - 2, x1: p.x + 2, y0: y(p.deck.ci[1]), y1: y(p.deck.ci[0]) };
     if (group) {
       group.label += ` · ${p.label}`;
-      group.bars.push(bar);
+      group.marks.push(...arrowMarks(p));
     } else {
-      groups.push({ x: p.x, y: p.y, playRate: p.deck.playRate, label: p.label, bars: [bar] });
+      groups.push({
+        x: p.x,
+        y: p.y,
+        playRate: p.deck.playRate,
+        label: p.label,
+        marks: arrowMarks(p),
+      });
     }
   }
 
-  // Intervals first, so every dot sits on top of every bar
+  // Arrows first, so every dot sits on top: from last week's position to this week's
   for (const p of points) {
-    svg
+    if (!p.from) continue;
+    const dx = p.x - p.from.x;
+    const dy = p.y - p.from.y;
+    const length = Math.hypot(dx, dy);
+    if (length < 10) continue;
+    const ux = dx / length;
+    const uy = dy / length;
+    // Stop short of the dot, and draw the head by hand (no SVG markers needed)
+    const tipX = p.x - ux * 7;
+    const tipY = p.y - uy * 7;
+    const arrow = svg.append('g').attr('opacity', 0.75);
+    arrow
+      .append('circle')
+      .attr('cx', p.from.x)
+      .attr('cy', p.from.y)
+      .attr('r', 2.5)
+      .attr('fill', 'none')
+      .attr('stroke', theme.text2)
+      .attr('stroke-width', 1.5);
+    arrow
       .append('line')
-      .attr('x1', p.x)
-      .attr('x2', p.x)
-      .attr('y1', y(p.deck.ci[0]))
-      .attr('y2', y(p.deck.ci[1]))
-      .attr('stroke', signalColor[p.deck.signal])
-      .attr('stroke-opacity', 0.45)
-      .attr('stroke-width', 2)
-      .attr('stroke-linecap', 'round');
+      .attr('x1', p.from.x + ux * 2.5)
+      .attr('y1', p.from.y + uy * 2.5)
+      .attr('x2', tipX - ux * 5)
+      .attr('y2', tipY - uy * 5)
+      .attr('stroke', theme.text2)
+      .attr('stroke-width', 1.5);
+    arrow
+      .append('path')
+      .attr(
+        'd',
+        `M${tipX},${tipY}L${tipX - ux * 6 - uy * 3.5},${tipY - uy * 6 + ux * 3.5}L${
+          tipX - ux * 6 + uy * 3.5
+        },${tipY - uy * 6 - ux * 3.5}Z`,
+      )
+      .attr('fill', theme.text2);
   }
 
   const labels = placeLabels(groups, {
@@ -229,6 +280,20 @@ export function metaMapChart(report, { document, theme, width = 800 }) {
   });
   for (const g of groups) {
     const label = labels.get(g);
+    if (label.far) {
+      // Leader line from the dot to the nearest point of the label
+      const nx = Math.min(Math.max(g.x, label.x0), label.x1);
+      const ny = Math.min(Math.max(g.y, label.y0), label.y1);
+      const d = Math.hypot(nx - g.x, ny - g.y);
+      svg
+        .append('line')
+        .attr('x1', g.x + ((nx - g.x) / d) * 7)
+        .attr('y1', g.y + ((ny - g.y) / d) * 7)
+        .attr('x2', nx)
+        .attr('y2', ny)
+        .attr('stroke', theme.muted)
+        .attr('stroke-width', 1);
+    }
     svg
       .append('text')
       .attr('x', label.x)
@@ -266,9 +331,11 @@ export function metaMapChart(report, { document, theme, width = 800 }) {
           `${formatPct(deck.winRate)} de victoires`,
           `IC 95 % : ${formatPct(deck.ci[0])} – ${formatPct(deck.ci[1])}`,
           `${formatPct(deck.playRate)} des decks · ${formatCount(deck.games, unit)}`,
-          deck.deltaPlayRate == null
-            ? 'Absent la semaine précédente'
-            : `${formatDelta(deck.deltaPlayRate)} pt vs semaine précédente`,
+          deck.previous
+            ? `Semaine précédente : ${formatPct(deck.previous.playRate)} des decks, ${formatPct(
+                deck.previous.winRate,
+              )} de victoires`
+            : 'Absent la semaine précédente',
         ].join('\n'),
       );
   }
@@ -293,7 +360,7 @@ export function metaMapChart(report, { document, theme, width = 800 }) {
     updatedAt: week.updatedAt,
     sampleSize: week.sampleSize,
     unit,
-    note: 'En haut à droite : populaires et performants · en haut à gauche : peu joués mais performants · trait : IC 95 %',
+    note: 'Flèche : déplacement depuis la semaine précédente · en haut à droite : populaires et performants · en haut à gauche : peu joués mais performants',
   });
   return finalize(svg, height);
 }
