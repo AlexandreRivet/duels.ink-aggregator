@@ -1,4 +1,5 @@
 // Renders the weekly digest images and the Discord message into out/digest/.
+// Without --queue, uses the featured queue (see config.queues).
 // Usage: npm run digest [-- --week 2026-09-27] [-- --queue core-bo1] [-- --theme light]
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -11,6 +12,7 @@ import { trendsChart } from '../src/charts/trends.js';
 import { config } from '../src/config.js';
 import { buildDigestMessage } from '../src/lib/digest-message.js';
 import { buildReport } from '../src/lib/metrics.js';
+import { pickFeaturedQueue } from '../src/lib/queues.js';
 import { createDocument, svgToPng } from '../src/lib/render-png.js';
 import { readAllWeeks, readIndex } from '../src/lib/store.js';
 
@@ -18,7 +20,7 @@ export const OUT_DIR = fileURLToPath(new URL('../out/digest/', import.meta.url))
 
 const { values: args } = parseArgs({
   options: {
-    queue: { type: 'string', default: config.defaultQueue },
+    queue: { type: 'string' },
     week: { type: 'string' },
     // Most people use Discord in dark mode.
     theme: { type: 'string', default: 'dark' },
@@ -28,11 +30,13 @@ const { values: args } = parseArgs({
 const theme = themes[args.theme];
 if (!theme) throw new Error(`Unknown theme: ${args.theme} (light | dark)`);
 
-const index = await readIndex(args.queue);
-if (!index) throw new Error(`No data for ${args.queue}: run npm run collect first`);
+const index = args.queue
+  ? await readIndex(args.queue)
+  : pickFeaturedQueue(await Promise.all(config.queues.map(readIndex)));
+if (!index) throw new Error(`No data for ${args.queue ?? 'any queue'}: run npm run collect first`);
 const report = buildReport({
   index,
-  snapshots: await readAllWeeks(args.queue),
+  snapshots: await readAllWeeks(index.queue),
   weekStart: args.week,
 });
 

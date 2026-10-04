@@ -36,6 +36,14 @@ renders them in Node (jsdom + resvg, bundled Inter font), with no headless brows
 
 Settings (collected queues, number of weeks, thresholds) live in [src/config.js](src/config.js).
 
+### Queues and set betas
+
+`config.queues` lists the collected queues in priority order. The digest and the page feature the
+first one that has data for the last finished week; the page lets you switch to the others.
+
+During a set's beta, put the beta queue first: when duels.ink closes it at release, it stops
+getting new weeks and the next queue takes over on its own.
+
 ## Setup
 
 ```bash

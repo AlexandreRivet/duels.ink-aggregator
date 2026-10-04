@@ -13,13 +13,16 @@ import {
 } from '../src/lib/format.js';
 import { INKS, deckName } from '../src/lib/inks.js';
 import { buildReport } from '../src/lib/metrics.js';
+import { pickFeaturedQueue } from '../src/lib/queues.js';
 
 const BASE = import.meta.env.BASE_URL;
 const $ = (id) => document.getElementById(id);
 const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
+const indexCache = new Map();
 const cache = new Map();
 const state = readUrlState();
+let featuredQueue = null;
 let lastReport = null;
 let renderToken = 0;
 
@@ -36,12 +39,24 @@ async function fetchJson(url) {
   return res.json();
 }
 
+/** A queue's index, or null when nothing has been collected for it yet. */
+function loadIndex(queue) {
+  if (!indexCache.has(queue)) {
+    indexCache.set(
+      queue,
+      fetchJson(`${BASE}${queue}/index.json`).catch(() => null),
+    );
+  }
+  return indexCache.get(queue);
+}
+
 function loadQueue(queue) {
   if (!cache.has(queue)) {
     cache.set(
       queue,
       (async () => {
-        const index = await fetchJson(`${BASE}${queue}/index.json`);
+        const index = await loadIndex(queue);
+        if (!index) throw new Error(`No data for ${queue}`);
         const snapshots = await Promise.all(
           index.weeks.map((w) => fetchJson(`${BASE}${queue}/weeks/${w.startDate}.json`)),
         );
@@ -57,7 +72,7 @@ function loadQueue(queue) {
 function readUrlState() {
   const params = new URLSearchParams(location.search);
   return {
-    queue: params.get('queue') ?? config.defaultQueue,
+    queue: params.get('queue'),
     week: params.get('semaine'),
     matchupWeeks: Number(params.get('matchups')) || config.matchupWeeks,
   };
@@ -65,7 +80,7 @@ function readUrlState() {
 
 function writeUrlState() {
   const params = new URLSearchParams();
-  if (state.queue !== config.defaultQueue) params.set('queue', state.queue);
+  if (state.queue !== featuredQueue) params.set('queue', state.queue);
   if (state.week) params.set('semaine', state.week);
   if (state.matchupWeeks !== config.matchupWeeks) params.set('matchups', state.matchupWeeks);
   const query = params.toString();
@@ -74,10 +89,17 @@ function writeUrlState() {
 
 // --- Filters ---
 
-function setupFilters() {
-  if (config.queues.length > 1) {
+async function setupFilters() {
+  const indexes = (await Promise.all(config.queues.map(loadIndex))).filter(Boolean);
+  if (!indexes.length) throw new Error('No data collected yet');
+  featuredQueue = pickFeaturedQueue(indexes).queue;
+  if (!indexes.some((index) => index.queue === state.queue)) state.queue = featuredQueue;
+
+  if (indexes.length > 1) {
     $('queue-field').hidden = false;
-    $('queue').replaceChildren(...config.queues.map((q) => el('option', { value: q }, q)));
+    $('queue').replaceChildren(
+      ...indexes.map((index) => el('option', { value: index.queue }, index.queueName)),
+    );
   }
   $('queue').value = state.queue;
   $('matchup-weeks').value = String(state.matchupWeeks);
@@ -262,6 +284,12 @@ function renderCharts(report) {
   );
 }
 
+function showError(error) {
+  console.error(error);
+  $('subtitle').textContent = 'Impossible de charger les données.';
+  $('charts').replaceChildren(el('p', { class: 'error' }, error.message));
+}
+
 async function render() {
   const token = ++renderToken;
   // On reload, keep the previous render dimmed rather than an empty screen.
@@ -283,9 +311,7 @@ async function render() {
     renderKpis(report);
     renderCharts(report);
   } catch (error) {
-    console.error(error);
-    $('subtitle').textContent = 'Impossible de charger les données.';
-    $('charts').replaceChildren(el('p', { class: 'error' }, error.message));
+    showError(error);
   } finally {
     if (token === renderToken) $('charts').classList.remove('loading');
   }
@@ -340,5 +366,4 @@ darkQuery.addEventListener('change', () => {
   if (lastReport) renderCharts(lastReport);
 });
 
-setupFilters();
-render();
+setupFilters().then(render, showError);

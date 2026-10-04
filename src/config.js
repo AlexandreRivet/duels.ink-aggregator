@@ -2,11 +2,13 @@
  * Settings shared by the collector, the Discord digest and the web page.
  */
 export const config = {
-  /** Queues collected every week (ids from meta.queues.active). */
+  /**
+   * Queues collected every week (ids from meta.queues.active), in priority order: the digest
+   * and the page feature the first one with data for the last finished week. During a set's
+   * beta, list the beta queue first; once duels.ink closes it, it stops getting new weeks and
+   * the next queue takes over.
+   */
   queues: ['core-bo1'],
-
-  /** Queue shown by default on the web page and used for the Discord digest. */
-  defaultQueue: 'core-bo1',
 
   /** A deck only appears in the charts above this play rate (%). */
   minPlayRate: 1,
