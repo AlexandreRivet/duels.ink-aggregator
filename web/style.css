@@ -1,0 +1,277 @@
+@font-face {
+  font-family: Inter;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../assets/fonts/Inter_400Regular.ttf') format('truetype');
+}
+@font-face {
+  font-family: Inter;
+  font-weight: 500;
+  font-display: swap;
+  src: url('../assets/fonts/Inter_500Medium.ttf') format('truetype');
+}
+@font-face {
+  font-family: Inter;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../assets/fonts/Inter_600SemiBold.ttf') format('truetype');
+}
+
+:root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface: #fcfcfb;
+  --text: #0b0b0b;
+  --text-2: #52514e;
+  --muted: #898781;
+  --grid: #e1e0d9;
+  --border: rgba(11, 11, 11, 0.1);
+  --hover-wash: rgba(11, 11, 11, 0.05);
+  --accent: #2a78d6;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --text: #ffffff;
+    --text-2: #c3c2b7;
+    --muted: #898781;
+    --grid: #2c2c2a;
+    --border: rgba(255, 255, 255, 0.1);
+    --hover-wash: rgba(255, 255, 255, 0.06);
+    --accent: #3987e5;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--text);
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+a {
+  color: var(--accent);
+}
+
+.page {
+  max-width: 1720px;
+  margin: 0 auto;
+  padding: 32px 16px 48px;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.subtitle {
+  margin: 4px 0 0;
+  color: var(--text-2);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  margin: 24px 0 20px;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-2);
+}
+
+.field select {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.kpi {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.kpi-label {
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.kpi-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.kpi-delta {
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.chips {
+  display: inline-flex;
+  flex: none;
+}
+
+.chip {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--surface);
+}
+
+.chip + .chip {
+  margin-left: -1px;
+}
+
+.charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 680px), 1fr));
+  gap: 20px;
+  transition: opacity 0.2s;
+}
+
+.charts.loading {
+  opacity: 0.5;
+}
+
+.card {
+  margin: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.card svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.card .hit {
+  outline: none;
+}
+
+.card .hit:hover,
+.card .hit:focus-visible {
+  fill: var(--hover-wash);
+}
+
+.card .cell:hover,
+.card .cell:focus-visible {
+  outline: none;
+  stroke: var(--text);
+  stroke-width: 2;
+}
+
+.table-view {
+  border-top: 1px solid var(--border);
+  padding: 0 24px;
+}
+
+.table-view summary {
+  cursor: pointer;
+  padding: 12px 0;
+  color: var(--text-2);
+}
+
+.table-scroll {
+  overflow-x: auto;
+  padding-bottom: 16px;
+}
+
+.table-view table {
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.table-view th,
+.table-view td {
+  padding: 4px 12px 4px 0;
+  border-bottom: 1px solid var(--grid);
+  text-align: right;
+}
+
+.table-view th:first-child,
+.table-view td:first-child {
+  text-align: left;
+}
+
+.table-view th {
+  color: var(--text-2);
+  font-weight: 500;
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 10;
+  max-width: 320px;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.tooltip strong {
+  display: block;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.page-footer {
+  margin-top: 32px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.error {
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+}
