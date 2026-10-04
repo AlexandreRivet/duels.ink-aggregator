@@ -1,0 +1,98 @@
+name: Weekly digest
+
+on:
+  schedule:
+    # Monday 05:17 UTC = 7:17 (summer) / 6:17 (winter) in Paris. Off-the-hour minute:
+    # GitHub delays crons scheduled exactly on the hour the most.
+    - cron: '17 5 * * 1'
+  workflow_dispatch:
+    inputs:
+      post:
+        description: Post the digest to Discord
+        type: boolean
+        default: false
+
+concurrency:
+  group: weekly-digest
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+
+      - name: Collect finished weeks
+        run: npm run collect
+
+      - name: Commit the data
+        run: |
+          git add data
+          if git diff --cached --quiet; then
+            echo "No new data"
+          else
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git commit -m "data: weekly collection ($(date -u +%F))"
+            git push
+          fi
+
+      - name: Render the digest images
+        run: npm run digest
+
+      - name: Build the page
+        run: npm run build
+
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: digest
+          path: out/digest
+          retention-days: 30
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  post:
+    needs: [build, deploy]
+    # Posts even when GitHub Pages isn't enabled (yet): the message then goes out without a link.
+    if: >-
+      always() && needs.build.result == 'success' &&
+      (github.event_name == 'schedule' || inputs.post)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/download-artifact@v4
+        with:
+          name: digest
+          path: out/digest
+      - name: Post to Discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          SITE_URL: ${{ needs.deploy.outputs.page_url }}
+        run: node scripts/post-discord.js
