@@ -41,8 +41,11 @@ Settings (collected queues, number of weeks, thresholds) live in [src/config.js]
 `config.queues` lists the collected queues in priority order. The digest and the page feature the
 first one that has data for the last finished week; the page lets you switch to the others.
 
-During a set's beta, put the beta queue first: when duels.ink closes it at release, it stops
-getting new weeks and the next queue takes over on its own.
+During a set's beta, put the beta queue first. Right now only the Set 14 betas are collected:
+`quick-play-core-set14` (BO1, featured) and `core-bo3-set14`. When duels.ink closes them at
+release, they stop getting new weeks: put `core-bo1` back at the top of the list then, or the
+digest keeps featuring the last beta week. The BO1 beta is unranked quick play: players
+experiment and skill levels are mixed, so read it as an early signal.
 
 In BO3 queues the API counts decks and matchups in **matches** (and `activity.totalGames` in
 single games): win rates are match win rates, and every count is shown as "matchs".

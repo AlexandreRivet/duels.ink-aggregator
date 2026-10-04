@@ -8,7 +8,8 @@ export const config = {
    * beta, list the beta queue first; once duels.ink closes it, it stops getting new weeks and
    * the next queue takes over.
    */
-  queues: ['core-bo1'],
+  // Set 14 betas only for now: put core-bo1 back (first) when Set 14 is released.
+  queues: ['quick-play-core-set14', 'core-bo3-set14'],
 
   /** A deck only appears in the charts above this play rate (%). */
   minPlayRate: 1,
