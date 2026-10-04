@@ -40,7 +40,7 @@ export function playDrawChart(report, { document, theme, width = 800 }) {
   }
 
   const rows = decks.filter((d) => d.playDraw.onPlay.games && d.playDraw.onDraw.games);
-  const col = { deck: PAD, plotFrom: 240, plotTo: 650, gap: width - PAD };
+  const col = { deck: PAD, plotFrom: 80, plotTo: 680, gap: width - PAD };
   const rates = rows.flatMap((d) => [d.playDraw.onPlay.winRate, d.playDraw.onDraw.winRate]);
   const x = scaleLinear()
     .domain([Math.min(48, min(rates)), Math.max(52, max(rates))])
