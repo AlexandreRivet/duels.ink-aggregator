@@ -97,7 +97,8 @@ export function metaTableChart(report, { document, theme, width = 800 }) {
   const rowsHeight = decks.length * ROW_HEIGHT;
 
   // Win-rate gridlines, behind the rows
-  const ticks = winScale.ticks(4);
+  // 3 ticks: on a wide scale (tiny samples, 0–100 %) more of them would collide.
+  const ticks = winScale.ticks(3);
   const grid = svg.append('g');
   for (const t of ticks) {
     grid

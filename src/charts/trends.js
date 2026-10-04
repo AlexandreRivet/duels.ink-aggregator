@@ -17,12 +17,12 @@ const GUTTER = 34;
 
 const METRICS = {
   playRate: {
-    title: (n) => `Popularité — ${n} dernières semaines`,
+    title: (period) => `Popularité — ${period}`,
     subtitle: 'Part des decks joués chaque semaine · même échelle pour tous les decks',
     value: (deck) => deck.playRate,
   },
   winRate: {
-    title: (n) => `Win rate — ${n} dernières semaines`,
+    title: (period) => `Win rate — ${period}`,
     subtitle: 'Win rate hebdomadaire · bande : intervalle de confiance à 95 % · repère à 50 %',
     value: (deck) => deck.winRate,
   },
@@ -35,7 +35,7 @@ export function trendsChart(
   const spec = METRICS[metric];
   const { weeks, eraMarkers } = report.trend;
   const decks = report.decks.slice(0, count ?? report.options.trendDecks);
-  const title = spec.title(weeks.length);
+  const title = spec.title(weeks.length > 1 ? `${weeks.length} dernières semaines` : 'semaine');
   const svg = createSvg(document, { width, title, theme });
 
   const eraNote = eraMarkers.length
@@ -64,8 +64,9 @@ export function trendsChart(
     const panel = svg.append('g').attr('transform', `translate(${px},${py})`);
     const plotLeft = GUTTER;
     const plotRight = panelWidth - 6;
+    // A single week sits in the middle of the plot.
     const x = scaleLinear()
-      .domain([0, Math.max(1, weeks.length - 1)])
+      .domain(weeks.length > 1 ? [0, weeks.length - 1] : [-1, 1])
       .range([plotLeft, plotRight]);
     const plot = panel.append('g').attr('transform', `translate(0,${PANEL_HEADER})`);
 
@@ -169,6 +170,19 @@ export function trendsChart(
         )
         .attr('fill', theme.accent)
         .attr('fill-opacity', 0.14);
+      // A band needs two weeks: with one, show the interval as a whisker.
+      if (history.length === 1 && history[0].ci) {
+        plot
+          .append('line')
+          .attr('x1', x(0))
+          .attr('x2', x(0))
+          .attr('y1', y(history[0].ci[0]))
+          .attr('y2', y(history[0].ci[1]))
+          .attr('stroke', theme.accent)
+          .attr('stroke-opacity', 0.35)
+          .attr('stroke-width', 6)
+          .attr('stroke-linecap', 'round');
+      }
     }
 
     const value = (p) => (metric === 'playRate' ? p.playRate : p.winRate);
@@ -200,21 +214,23 @@ export function trendsChart(
     }
 
     const labelY = PLOT_HEIGHT + 14;
-    plot
-      .append('text')
-      .attr('x', plotLeft)
-      .attr('y', labelY)
-      .attr('font-size', 10)
-      .attr('fill', theme.muted)
-      .text(formatDay(weeks[0]));
-    plot
-      .append('text')
-      .attr('x', plotRight)
-      .attr('y', labelY)
-      .attr('font-size', 10)
-      .attr('fill', theme.muted)
-      .attr('text-anchor', 'end')
-      .text(formatDay(weeks.at(-1)));
+    const xLabels =
+      weeks.length > 1
+        ? [
+            { x: plotLeft, anchor: 'start', week: weeks[0] },
+            { x: plotRight, anchor: 'end', week: weeks.at(-1) },
+          ]
+        : [{ x: x(0), anchor: 'middle', week: weeks[0] }];
+    for (const label of xLabels) {
+      plot
+        .append('text')
+        .attr('x', label.x)
+        .attr('y', labelY)
+        .attr('font-size', 10)
+        .attr('fill', theme.muted)
+        .attr('text-anchor', label.anchor)
+        .text(formatDay(label.week));
+    }
 
     // One hover area per week: readers aim at a date, not at a 2px line
     const step = weeks.length > 1 ? x(1) - x(0) : plotRight - plotLeft;

@@ -171,7 +171,11 @@ function renderKpis(report) {
           risers[0],
           `${formatDelta(risers[0].deltaPlayRate)} pt de popularité`,
         )
-      : kpi('Plus forte hausse', '—', 'Aucun deck ne bouge de plus de 0,5 pt'),
+      : kpi(
+          'Plus forte hausse',
+          '—',
+          previousWeek ? 'Aucun deck ne bouge de plus de 0,5 pt' : 'Pas de semaine précédente',
+        ),
   );
   if (bestWinRate) {
     tiles.push(
@@ -306,8 +310,9 @@ async function render() {
     });
     lastReport = report;
     fillWeekSelect(index, report.week.startDate);
+    const collected = index.weeks.length > 1 ? 'semaines collectées' : 'semaine collectée';
     $('subtitle').textContent =
-      `${report.queueName} · ${index.weeks.length} semaines collectées · données duels.ink du ${formatUpdatedAt(report.week.updatedAt)}`;
+      `${report.queueName} · ${index.weeks.length} ${collected} · données duels.ink du ${formatUpdatedAt(report.week.updatedAt)}`;
     renderKpis(report);
     renderCharts(report);
   } catch (error) {

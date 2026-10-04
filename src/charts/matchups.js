@@ -205,7 +205,9 @@ export function matchupsChart(report, { document, theme, width = 800 }) {
     theme,
     updatedAt,
     totalGames,
-    note: `Semaines du ${formatDay(weeks[0])} au ${formatDay(endDate)}, sans remonter avant la sortie du set en cours`,
+    note: `Semaines du ${formatDay(weeks[0])} au ${formatDay(endDate)}${
+      report.era ? ', sans remonter avant la sortie du set en cours' : ''
+    }`,
   });
   return finalize(svg, height);
 }
