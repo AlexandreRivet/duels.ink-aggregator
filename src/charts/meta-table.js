@@ -1,7 +1,8 @@
 /**
  * "Méta de la semaine" (meta of the week): one row per deck, most played first.
- * Play rate as bars, change vs the previous week, win rate with its 95% confidence
- * interval (the dot is only coloured when the gap to 50% is significant).
+ * Play rate as bars, win rate with its 95% confidence interval (the dot is only coloured when
+ * the gap to 50% is significant), and the change since the previous week: a tick on the bar and
+ * a hollow dot mark last week's values, and the changes are bold when they beat the noise.
  */
 import { max, min, scaleLinear } from 'd3';
 import { formatCount, formatDelta, formatInt, formatPct, formatWeekRange } from '../lib/format.js';
@@ -28,6 +29,20 @@ export const SIGNAL_LABELS = {
   below: 'En dessous de 50 %',
 };
 
+/** A change in points, right-aligned: bold when it beats the noise, muted otherwise. */
+function deltaText(row, { x, cy, delta, change, theme }) {
+  const significant = change && change.signal !== 'flat';
+  row
+    .append('text')
+    .attr('x', x)
+    .attr('y', cy + middle(12))
+    .attr('font-size', 12)
+    .attr('font-weight', significant ? 600 : 400)
+    .attr('fill', delta == null ? theme.muted : significant ? theme.text : theme.muted)
+    .attr('text-anchor', 'end')
+    .text(delta == null ? 'nouveau' : formatDelta(delta));
+}
+
 export function metaTableChart(report, { document, theme, width = 800 }) {
   const { decks, week, unit } = report;
   const title = 'Méta de la semaine';
@@ -44,12 +59,13 @@ export function metaTableChart(report, { document, theme, width = 800 }) {
 
   const col = {
     deck: PAD,
-    bar: 230,
-    barMax: 140,
-    delta: 474,
-    dotsFrom: 500,
-    dotsTo: 640,
-    winRate: 708,
+    bar: 220,
+    barMax: 110,
+    deltaPlay: 424,
+    dotsFrom: 446,
+    dotsTo: 580,
+    winRate: 642,
+    deltaWin: 700,
     games: width - PAD,
   };
 
@@ -60,15 +76,15 @@ export function metaTableChart(report, { document, theme, width = 800 }) {
   };
 
   const playScale = scaleLinear()
-    .domain([0, max(decks, (d) => d.playRate)])
+    .domain([0, max(decks, (d) => Math.max(d.playRate, d.previous?.playRate ?? 0))])
     .range([0, col.barMax]);
   const lo = Math.min(
     48,
-    min(decks, (d) => d.ci[0]),
+    min(decks, (d) => Math.min(d.ci[0], d.previous?.winRate ?? 100)),
   );
   const hi = Math.max(
     52,
-    max(decks, (d) => d.ci[1]),
+    max(decks, (d) => Math.max(d.ci[1], d.previous?.winRate ?? 0)),
   );
   const winScale = scaleLinear()
     .domain([lo, hi])
@@ -90,8 +106,9 @@ export function metaTableChart(report, { document, theme, width = 800 }) {
       .text(label);
   columnHeader(col.deck, 'DECK');
   columnHeader(col.bar, 'POPULARITÉ');
-  columnHeader(col.delta, 'Δ PTS', 'end');
+  columnHeader(col.deltaPlay, 'Δ', 'end');
   columnHeader(col.dotsFrom, 'WIN RATE · IC 95 %');
+  columnHeader(col.deltaWin, 'Δ', 'end');
   columnHeader(col.games, unit.many.toUpperCase(), 'end');
 
   const top = y + 10;
@@ -142,24 +159,47 @@ export function metaTableChart(report, { document, theme, width = 800 }) {
       .append('path')
       .attr('d', horizontalBar(col.bar, cy - BAR_HEIGHT / 2, barWidth, BAR_HEIGHT))
       .attr('fill', theme.accent);
+    if (deck.previous) {
+      // Last week's play rate: a tick across the bar
+      const px = col.bar + playScale(deck.previous.playRate);
+      row
+        .append('line')
+        .attr('x1', px)
+        .attr('x2', px)
+        .attr('y1', cy - BAR_HEIGHT / 2 - 3)
+        .attr('y2', cy + BAR_HEIGHT / 2 + 3)
+        .attr('stroke', theme.text)
+        .attr('stroke-opacity', 0.8)
+        .attr('stroke-width', 2);
+    }
     row
       .append('text')
-      .attr('x', col.bar + barWidth + 6)
+      .attr('x', col.bar + Math.max(barWidth, playScale(deck.previous?.playRate ?? 0)) + 6)
       .attr('y', cy + middle(12))
       .attr('font-size', 12)
       .attr('fill', theme.text2)
       .text(formatPct(deck.playRate));
 
-    row
-      .append('text')
-      .attr('x', col.delta)
-      .attr('y', cy + middle(12))
-      .attr('font-size', 12)
-      .attr('fill', deck.deltaPlayRate == null ? theme.muted : theme.text2)
-      .attr('text-anchor', 'end')
-      .text(deck.deltaPlayRate == null ? 'nouveau' : formatDelta(deck.deltaPlayRate));
+    deltaText(row, {
+      x: col.deltaPlay,
+      cy,
+      delta: deck.deltaPlayRate,
+      change: deck.playRateChange,
+      theme,
+    });
 
     const color = signalColor[deck.signal];
+    if (deck.previous) {
+      // Last week's win rate: a hollow dot, under this week's
+      row
+        .append('circle')
+        .attr('cx', winScale(deck.previous.winRate))
+        .attr('cy', cy)
+        .attr('r', 3.5)
+        .attr('fill', 'none')
+        .attr('stroke', theme.text2)
+        .attr('stroke-width', 1.5);
+    }
     row
       .append('line')
       .attr('x1', winScale(deck.ci[0]))
@@ -187,6 +227,13 @@ export function metaTableChart(report, { document, theme, width = 800 }) {
       .attr('fill', theme.text)
       .attr('text-anchor', 'end')
       .text(formatPct(deck.winRate));
+    deltaText(row, {
+      x: col.deltaWin,
+      cy,
+      delta: deck.deltaWinRate,
+      change: deck.winRateChange,
+      theme,
+    });
     row
       .append('text')
       .attr('x', col.games)
@@ -206,14 +253,23 @@ export function metaTableChart(report, { document, theme, width = 800 }) {
         `${formatPct(deck.winRate)} de victoires`,
         `IC 95 % : ${formatPct(deck.ci[0])} – ${formatPct(deck.ci[1])}`,
         `${formatPct(deck.playRate)} des decks · ${formatCount(deck.games, unit)}`,
-        deck.deltaPlayRate == null
-          ? 'Absent la semaine précédente'
-          : `${formatDelta(deck.deltaPlayRate)} pt vs semaine précédente`,
+        ...(deck.previous
+          ? [
+              `Semaine précédente : ${formatPct(deck.previous.playRate)} des decks, ${formatPct(
+                deck.previous.winRate,
+              )} de victoires`,
+              `Popularité ${formatDelta(deck.deltaPlayRate)} pt${
+                deck.playRateChange.signal === 'flat' ? ' (dans le bruit)' : ''
+              } · win rate ${formatDelta(deck.deltaWinRate)} pt${
+                deck.winRateChange.signal === 'flat' ? ' (dans le bruit)' : ''
+              }`,
+            ]
+          : ['Absent la semaine précédente']),
       ],
     });
   });
 
-  // Legend
+  // Legend: dot colours, then last week's markers
   const ly = top + rowsHeight + 40;
   let lx = PAD;
   for (const signal of ['above', 'neutral', 'below']) {
@@ -226,14 +282,39 @@ export function metaTableChart(report, { document, theme, width = 800 }) {
         theme,
       }) + 20;
   }
+  const ly2 = ly + 24;
+  svg
+    .append('line')
+    .attr('x1', PAD + 4)
+    .attr('x2', PAD + 4)
+    .attr('y1', ly2 - 7)
+    .attr('y2', ly2 + 7)
+    .attr('stroke', theme.text)
+    .attr('stroke-opacity', 0.8)
+    .attr('stroke-width', 2);
+  svg
+    .append('circle')
+    .attr('cx', PAD + 18)
+    .attr('cy', ly2)
+    .attr('r', 3.5)
+    .attr('fill', 'none')
+    .attr('stroke', theme.text2)
+    .attr('stroke-width', 1.5);
+  svg
+    .append('text')
+    .attr('x', PAD + 30)
+    .attr('y', ly2 + middle(12))
+    .attr('font-size', 12)
+    .attr('fill', theme.text2)
+    .text('semaine précédente (popularité, win rate)');
 
   const height = footer(svg, {
-    y: ly + 30,
+    y: ly2 + 30,
     theme,
     updatedAt: week.updatedAt,
     sampleSize: week.sampleSize,
     unit,
-    note: 'Δ pts : évolution de la popularité vs la semaine précédente · trait : intervalle de confiance à 95 % du win rate',
+    note: 'Δ : évolution en points vs la semaine précédente, en gras quand elle dépasse le bruit (IC 95 %) · trait : IC 95 % du win rate',
   });
   return finalize(svg, height);
 }
