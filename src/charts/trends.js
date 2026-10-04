@@ -72,7 +72,7 @@ export function trendsChart(
     const plot = panel.append('g').attr('transform', `translate(0,${PANEL_HEADER})`);
 
     // Panel header: deck on the left, latest value and change on the right
-    deckLabel(panel, deck, { x: 0, y: 9, theme, weight: 500 });
+    deckLabel(panel, deck, { x: 0, y: 9, theme });
     panel
       .append('text')
       .attr('x', panelWidth)

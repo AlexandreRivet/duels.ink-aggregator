@@ -84,8 +84,10 @@ export function footer(svg, { y, theme, updatedAt, sampleSize, unit, note }) {
 }
 
 /** A deck's ink chips, vertically centred on `y`. Returns the width used. */
-export function inkChips(parent, colors, { x, y, theme, r = 5 }) {
+export function inkChips(parent, colors, { x, y, theme, r = 5, name }) {
   const g = parent.append('g').attr('transform', `translate(${x},${y})`);
+  // Accessible name, also shown by the browser when the chips are hovered
+  if (name) g.append('title').text(name);
   colors.forEach((ink, i) => {
     g.append('circle')
       .attr('cx', r + i * (r * 2 - 1))
@@ -98,17 +100,15 @@ export function inkChips(parent, colors, { x, y, theme, r = 5 }) {
   return r * 2 + (colors.length - 1) * (r * 2 - 1);
 }
 
-/** Ink chips + deck name. */
-export function deckLabel(parent, deck, { x, y, theme, size = 13, weight = 400 }) {
-  const chipsWidth = inkChips(parent, deck.colors, { x, y, theme });
-  parent
-    .append('text')
-    .attr('x', x + chipsWidth + 7)
-    .attr('y', y + middle(size))
-    .attr('font-size', size)
-    .attr('font-weight', weight)
-    .attr('fill', theme.text)
-    .text(deckName(deck.colors));
+/** Width taken by a deck label (its chips) at the default size. */
+export const DECK_LABEL_WIDTH = 23;
+
+/**
+ * A deck's label: its ink chips, vertically centred on `y`. The name goes into an SVG <title>,
+ * read by screen readers and shown when the chips are hovered on the page.
+ */
+export function deckLabel(parent, deck, { x, y, theme, r = 6 }) {
+  return inkChips(parent, deck.colors, { x, y, theme, r, name: deckName(deck.colors) });
 }
 
 /**
