@@ -117,6 +117,14 @@ export function matchupsChart(report, { document, theme, width = 800 }) {
           );
         }
         if (!enough) tip.push(`Moins de ${minGames} ${unit.many} : non coloré`);
+        if (cell.trend) {
+          tip.push(
+            `Cette semaine : ${formatPct(cell.thisWeek.winRate)} sur ${formatCount(
+              cell.thisWeek.games,
+              unit,
+            )}, ${cell.trend === 'up' ? 'nettement au-dessus' : 'nettement en dessous'} des semaines d'avant (${formatPct(cell.before.winRate)})`,
+          );
+        }
       }
 
       g.append('rect')
@@ -141,6 +149,17 @@ export function matchupsChart(report, { document, theme, width = 800 }) {
         .attr('text-anchor', 'middle')
         .attr('pointer-events', 'none')
         .text(label);
+
+      // ▲ / ▼ in the corner: this week clearly above / below the window's earlier weeks
+      if (cell.trend) {
+        const cx = x + cellWidth - 9;
+        const cy = rowTop + 9;
+        const d = cell.trend === 'up' ? -1 : 1;
+        g.append('path')
+          .attr('d', `M${cx - 4},${cy - 2.5 * d}L${cx + 4},${cy - 2.5 * d}L${cx},${cy + 3.5 * d}Z`)
+          .attr('fill', enough ? inkOn(fill) : theme.text)
+          .attr('pointer-events', 'none');
+      }
     });
   });
 
@@ -201,8 +220,31 @@ export function matchupsChart(report, { document, theme, width = 800 }) {
     .attr('fill', theme.text2)
     .text(`— : moins de ${minGames} ${unit.many}`);
 
+  // Key for the ▲ / ▼ flags, only on weeks that have some
+  let footerTop = legendTop + 50;
+  if (cells.some((c) => c.trend)) {
+    const ky = legendTop + 46;
+    for (const [i, d] of [-1, 1].entries()) {
+      const cx = PAD + 4 + i * 12;
+      svg
+        .append('path')
+        .attr('d', `M${cx - 4},${ky - 2.5 * d}L${cx + 4},${ky - 2.5 * d}L${cx},${ky + 3.5 * d}Z`)
+        .attr('fill', theme.text2);
+    }
+    svg
+      .append('text')
+      .attr('x', PAD + 26)
+      .attr('y', ky + middle(11))
+      .attr('font-size', 11)
+      .attr('fill', theme.text2)
+      .text(
+        "cette semaine nettement au-dessus / en dessous des semaines d'avant (IC 99,7 %, ≥ 5 pts)",
+      );
+    footerTop += 22;
+  }
+
   const height = footer(svg, {
-    y: legendTop + 50,
+    y: footerTop,
     theme,
     updatedAt,
     sampleSize,
