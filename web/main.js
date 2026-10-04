@@ -1,4 +1,5 @@
 import { matchupsChart } from '../src/charts/matchups.js';
+import { metaMapChart } from '../src/charts/meta-map.js';
 import { metaTableChart } from '../src/charts/meta-table.js';
 import { themes } from '../src/charts/theme.js';
 import { trendsChart } from '../src/charts/trends.js';
@@ -264,6 +265,8 @@ function renderCharts(report) {
 
   const charts = [
     { id: 'meta', svg: metaTableChart(report, { document, theme }), table: metaTableView(report) },
+    // Same figures as the meta table, placed on a map: same table view.
+    { id: 'carte', svg: metaMapChart(report, { document, theme }), table: metaTableView(report) },
     {
       id: 'popularite',
       svg: trendsChart(report, { document, theme, metric: 'playRate' }),

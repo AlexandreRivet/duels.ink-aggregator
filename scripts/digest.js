@@ -8,6 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { matchupsChart } from '../src/charts/matchups.js';
+import { metaMapChart } from '../src/charts/meta-map.js';
 import { metaTableChart } from '../src/charts/meta-table.js';
 import { themes } from '../src/charts/theme.js';
 import { trendsChart } from '../src/charts/trends.js';
@@ -47,10 +48,11 @@ const document = createDocument();
 
 async function renderDigest(report, dir) {
   const images = [
+    // Discord shows at most 4 images in a card's grid; win-rate trends stay on the page.
     { file: 'meta.png', svg: metaTableChart(report, { document, theme }) },
+    { file: 'carte.png', svg: metaMapChart(report, { document, theme }) },
     { file: 'popularite.png', svg: trendsChart(report, { document, theme, metric: 'playRate' }) },
     { file: 'matchups.png', svg: matchupsChart(report, { document, theme }) },
-    { file: 'winrate.png', svg: trendsChart(report, { document, theme, metric: 'winRate' }) },
   ];
   await mkdir(dir, { recursive: true });
   for (const image of images) {
