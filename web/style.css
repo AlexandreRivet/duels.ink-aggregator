@@ -169,6 +169,25 @@ a {
   margin-left: -1px;
 }
 
+.kpi .chip {
+  width: 16px;
+  height: 16px;
+}
+
+.table-view .chips {
+  vertical-align: middle;
+}
+
+/* Visible to screen readers only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 .charts {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 680px), 1fr));

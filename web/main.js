@@ -16,7 +16,7 @@ import {
   formatUpdatedAt,
   formatWeekRange,
 } from '../src/lib/format.js';
-import { INKS, deckName } from '../src/lib/inks.js';
+import { INKS, deckEmoji, deckName } from '../src/lib/inks.js';
 import { buildReport, countsMatches, sampleSize, wilson } from '../src/lib/metrics.js';
 import { pickFeaturedQueue } from '../src/lib/queues.js';
 
@@ -145,13 +145,18 @@ function fillWeekSelect(index, snapshots, unit, selected) {
 
 // --- Key figures ---
 
+/**
+ * A deck as its ink chips. The name stays available: hidden text for screen readers (and
+ * copy-paste), and a tooltip on hover.
+ */
 function chips(colors) {
-  const wrapper = el('span', { class: 'chips', 'aria-hidden': 'true' });
+  const wrapper = el('span', { class: 'chips', title: deckName(colors) });
   for (const ink of colors) {
-    const chip = el('span', { class: 'chip' });
+    const chip = el('span', { class: 'chip', 'aria-hidden': 'true' });
     chip.style.background = INKS[ink]?.color ?? 'gray';
     wrapper.append(chip);
   }
+  wrapper.append(el('span', { class: 'sr-only' }, deckName(colors)));
   return wrapper;
 }
 
@@ -159,7 +164,7 @@ function kpi(label, value, detail) {
   const tile = el('div', { class: 'kpi' });
   const valueNode = el('div', { class: 'kpi-value' });
   if (typeof value === 'string') valueNode.textContent = value;
-  else valueNode.append(chips(value.colors), document.createTextNode(deckName(value.colors)));
+  else valueNode.append(chips(value.colors));
   tile.append(el('div', { class: 'kpi-label' }, label), valueNode);
   if (detail) tile.append(el('div', { class: 'kpi-delta' }, detail));
   return tile;
@@ -208,12 +213,18 @@ const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1);
 function table(headers, rows) {
   const node = el('table');
   const head = node.createTHead().insertRow();
-  for (const label of headers) head.append(el('th', { scope: 'col' }, label));
+  // Values are text, or nodes (a deck's chips)
+  const cell = (tag, attrs, value) => {
+    const node = el(tag, attrs);
+    node.append(value);
+    return node;
+  };
+  for (const label of headers) head.append(cell('th', { scope: 'col' }, label));
   const body = node.createTBody();
   for (const row of rows) {
     const tr = body.insertRow();
     row.forEach((value, i) =>
-      tr.append(i === 0 ? el('th', { scope: 'row' }, value) : el('td', {}, value)),
+      tr.append(i === 0 ? cell('th', { scope: 'row' }, value) : cell('td', {}, value)),
     );
   }
   return node;
@@ -223,7 +234,7 @@ function metaTableView(report) {
   return table(
     ['Deck', 'Popularité', 'Δ pts vs S−1', 'Win rate', 'IC 95 %', capitalize(report.unit.many)],
     report.decks.map((d) => [
-      deckName(d.colors),
+      chips(d.colors),
       formatPct(d.playRate),
       d.deltaPlayRate == null ? 'nouveau' : formatDelta(d.deltaPlayRate),
       formatPct(d.winRate),
@@ -237,7 +248,7 @@ function trendTableView(report, metric) {
   return table(
     ['Deck', ...report.trend.weeks.map(formatDay)],
     report.decks.map((d) => [
-      deckName(d.colors),
+      chips(d.colors),
       ...d.history.map((p) => formatPct(metric === 'playRate' ? p.playRate : p.winRate)),
     ]),
   );
@@ -247,9 +258,9 @@ function matchupTableView(report) {
   const { decks, cells } = report.matchups;
   const byKey = new Map(cells.map((c) => [`${c.row}|${c.col}`, c]));
   return table(
-    ['Deck \\ contre', ...decks.map((d) => deckName(d.colors))],
+    ['Deck \\ contre', ...decks.map((d) => chips(d.colors))],
     decks.map((row) => [
-      deckName(row.colors),
+      chips(row.colors),
       ...decks.map((col) => {
         const cell = byKey.get(`${row.key}|${col.key}`);
         if (cell.mirror) return 'miroir';
@@ -268,7 +279,7 @@ function moversTableView(report) {
       .filter((d) => d.previous)
       .sort((a, b) => b.deltaPlayRate - a.deltaPlayRate)
       .map((d) => [
-        deckName(d.colors),
+        chips(d.colors),
         formatPct(d.previous.playRate),
         formatPct(d.playRate),
         formatDelta(d.deltaPlayRate) + flat(d.playRateChange),
@@ -285,7 +296,7 @@ function playDrawTableView(report) {
     report.decks.map((d) => {
       const { onPlay, onDraw } = d.playDraw;
       return [
-        deckName(d.colors),
+        chips(d.colors),
         formatPct(onPlay.winRate),
         formatPct(onDraw.winRate),
         onPlay.winRate == null || onDraw.winRate == null
@@ -313,7 +324,7 @@ function deckSheetTableView(report, key) {
       const cell = byKey.get(`${key}|${opponent.key}`);
       if (cell.mirror || cell.winRate == null) {
         return [
-          deckName(opponent.colors),
+          chips(opponent.colors),
           formatPct(opponent.playRate),
           cell.mirror ? 'miroir' : '—',
           '—',
@@ -324,7 +335,7 @@ function deckSheetTableView(report, key) {
       }
       const ci = wilson((cell.winRate * cell.games) / 100, cell.games);
       return [
-        deckName(opponent.colors),
+        chips(opponent.colors),
         formatPct(opponent.playRate),
         formatPct(cell.winRate),
         `${formatPct(ci[0])} – ${formatPct(ci[1])}`,
@@ -358,7 +369,8 @@ function deckSheetCard(report, theme, opened) {
   const { decks } = report;
   const key = decks.some((d) => d.key === state.deck) ? state.deck : decks[0].key;
   const select = el('select', { 'aria-label': 'Deck de la fiche' });
-  select.replaceChildren(...decks.map((d) => el('option', { value: d.key }, deckName(d.colors))));
+  // Options are text only: the inks as coloured-circle emoji
+  select.replaceChildren(...decks.map((d) => el('option', { value: d.key }, deckEmoji(d.colors))));
   select.value = key;
   select.addEventListener('change', () => {
     state.deck = select.value === decks[0].key ? null : select.value;
