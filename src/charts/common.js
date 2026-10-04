@@ -128,6 +128,22 @@ export function horizontalBar(x0, y, width, height, radius = 4) {
   ].join('');
 }
 
+/** Bar square at `from` and rounded (4px) at `to`, in either direction. */
+export function barPath(from, to, y, height, radius = 4) {
+  const r = Math.min(radius, Math.abs(to - from) / 2, height / 2);
+  const s = to >= from ? 1 : -1;
+  const tip = to - s * r;
+  return [
+    `M${from},${y}`,
+    `H${tip}`,
+    `Q${to},${y} ${to},${y + r}`,
+    `V${y + height - r}`,
+    `Q${to},${y + height} ${tip},${y + height}`,
+    `H${from}`,
+    'Z',
+  ].join('');
+}
+
 /** Transparent hover area carrying the tooltip (web page only). */
 export function hitArea(parent, { x, y, width, height, tip }) {
   return parent

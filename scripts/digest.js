@@ -10,8 +10,8 @@ import { parseArgs } from 'node:util';
 import { matchupsChart } from '../src/charts/matchups.js';
 import { metaMapChart } from '../src/charts/meta-map.js';
 import { metaTableChart } from '../src/charts/meta-table.js';
+import { moversChart } from '../src/charts/movers.js';
 import { themes } from '../src/charts/theme.js';
-import { trendsChart } from '../src/charts/trends.js';
 import { config } from '../src/config.js';
 import { buildDigestCard } from '../src/lib/digest-message.js';
 import { buildReport, countsMatches } from '../src/lib/metrics.js';
@@ -48,10 +48,11 @@ const document = createDocument();
 
 async function renderDigest(report, dir) {
   const images = [
-    // Discord shows at most 4 images in a card's grid; win-rate trends stay on the page.
+    // A weekly digest compares with the previous week. Discord shows at most 4 images in a
+    // card's grid: the long-term trends and play/draw stay on the page.
     { file: 'meta.png', svg: metaTableChart(report, { document, theme }) },
     { file: 'carte.png', svg: metaMapChart(report, { document, theme }) },
-    { file: 'popularite.png', svg: trendsChart(report, { document, theme, metric: 'playRate' }) },
+    { file: 'mouvements.png', svg: moversChart(report, { document, theme }) },
     { file: 'matchups.png', svg: matchupsChart(report, { document, theme }) },
   ];
   await mkdir(dir, { recursive: true });

@@ -9,6 +9,7 @@ import { deckName } from '../lib/inks.js';
 import { wilson } from '../lib/metrics.js';
 import {
   PAD,
+  barPath,
   createSvg,
   deckLabel,
   finalize,
@@ -21,22 +22,6 @@ import {
 
 const ROW_HEIGHT = 28;
 const BAR_HEIGHT = 14;
-
-/** Bar square at `from` and rounded (4px) at `to`, in either direction. */
-function barPath(from, to, y, height, radius = 4) {
-  const r = Math.min(radius, Math.abs(to - from) / 2, height / 2);
-  const s = to >= from ? 1 : -1;
-  const tip = to - s * r;
-  return [
-    `M${from},${y}`,
-    `H${tip}`,
-    `Q${to},${y} ${to},${y + r}`,
-    `V${y + height - r}`,
-    `Q${to},${y + height} ${tip},${y + height}`,
-    `H${from}`,
-    'Z',
-  ].join('');
-}
 
 export const MATCHUP_SIGNAL_LABELS = {
   above: 'Favorable',

@@ -2,6 +2,7 @@ import { deckSheetChart } from '../src/charts/deck-sheet.js';
 import { matchupsChart } from '../src/charts/matchups.js';
 import { metaMapChart } from '../src/charts/meta-map.js';
 import { metaTableChart } from '../src/charts/meta-table.js';
+import { moversChart } from '../src/charts/movers.js';
 import { playDrawChart } from '../src/charts/play-draw.js';
 import { themes } from '../src/charts/theme.js';
 import { trendsChart } from '../src/charts/trends.js';
@@ -259,6 +260,25 @@ function matchupTableView(report) {
   );
 }
 
+function moversTableView(report) {
+  const flat = (change) => (change.signal === 'flat' ? ' (bruit)' : '');
+  return table(
+    ['Deck', 'Popularité S−1', 'Popularité', 'Δ pts', 'Win rate S−1', 'Win rate', 'Δ pts'],
+    report.decks
+      .filter((d) => d.previous)
+      .sort((a, b) => b.deltaPlayRate - a.deltaPlayRate)
+      .map((d) => [
+        deckName(d.colors),
+        formatPct(d.previous.playRate),
+        formatPct(d.playRate),
+        formatDelta(d.deltaPlayRate) + flat(d.playRateChange),
+        formatPct(d.previous.winRate),
+        formatPct(d.winRate),
+        formatDelta(d.deltaWinRate) + flat(d.winRateChange),
+      ]),
+  );
+}
+
 function playDrawTableView(report) {
   return table(
     ['Deck', 'En commençant', 'En second', 'Écart', capitalize(report.unit.many)],
@@ -370,6 +390,11 @@ function renderCharts(report) {
     // Same figures as the meta table, placed on a map: same table view.
     { id: 'carte', svg: metaMapChart(report, { document, theme }), table: metaTableView(report) },
     {
+      id: 'mouvements',
+      svg: moversChart(report, { document, theme }),
+      table: moversTableView(report),
+    },
+    {
       id: 'popularite',
       svg: trendsChart(report, { document, theme, metric: 'playRate' }),
       table: trendTableView(report, 'playRate'),
@@ -393,7 +418,7 @@ function renderCharts(report) {
 
   const cards = charts.map((chart) => card(chart, opened));
   // The deck sheet sits next to the matchup matrix.
-  cards.splice(4, 0, deckSheetCard(report, theme, opened));
+  cards.splice(5, 0, deckSheetCard(report, theme, opened));
   container.replaceChildren(...cards);
 }
 
