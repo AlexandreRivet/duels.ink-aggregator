@@ -5,10 +5,11 @@
   "description": "Weekly collection and visualisation of the Lorcana meta from the public duels.ink API",
   "type": "module",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.13"
   },
   "scripts": {
     "collect": "node scripts/collect.js",
+    "digest": "node scripts/digest.js",
     "check:api": "node scripts/check-api.js",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
@@ -17,6 +18,8 @@
     "prettier": "^3.6.2"
   },
   "dependencies": {
-    "d3": "^7.9.0"
+    "@resvg/resvg-js": "^2.6.2",
+    "d3": "^7.9.0",
+    "jsdom": "^29.1.1"
   }
 }
