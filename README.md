@@ -17,7 +17,7 @@ for the team.
 ## How it works
 
 ```
-GitHub Actions, Monday 9:00 (Paris time)
+GitHub Actions, Monday 08:00 UTC (10:00 / 9:00 in Paris)
   npm run collect    → data/<queue>/weeks/<start>.json   (committed automatically)
   npm run digest     → out/digest/{bo1,bo3}/*.png + digest.json
   npm run build      → dist/  → GitHub Pages

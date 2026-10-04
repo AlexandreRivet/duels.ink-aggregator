@@ -2,10 +2,8 @@ name: Weekly digest
 
 on:
   schedule:
-    # Monday 9:00 in Paris. Crons are UTC, so both 9:00 CEST (07:00 UTC) and 9:00 CET
-    # (08:00 UTC) are scheduled and the `gate` job keeps the one matching today's offset.
+    # Monday 08:00 UTC = 10:00 (summer) / 9:00 (winter) in Paris: ready before lunch.
     # GitHub may start scheduled runs a few minutes late.
-    - cron: '0 7 * * 1'
     - cron: '0 8 * * 1'
   workflow_dispatch:
     inputs:
@@ -19,28 +17,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  gate:
-    runs-on: ubuntu-latest
-    outputs:
-      run: ${{ steps.check.outputs.run }}
-    steps:
-      - id: check
-        env:
-          EVENT: ${{ github.event_name }}
-          CRON: ${{ github.event.schedule }}
-        run: |
-          offset=$(TZ=Europe/Paris date +%z)
-          case "$EVENT|$CRON|$offset" in
-            workflow_dispatch*) run=true ;;
-            "schedule|0 7 * * 1|+0200" | "schedule|0 8 * * 1|+0100") run=true ;;
-            *) run=false ;;
-          esac
-          echo "Paris offset $offset, cron '$CRON' → run=$run"
-          echo "run=$run" >> "$GITHUB_OUTPUT"
-
   build:
-    needs: gate
-    if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
