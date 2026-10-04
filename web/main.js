@@ -1,6 +1,7 @@
 import { matchupsChart } from '../src/charts/matchups.js';
 import { metaMapChart } from '../src/charts/meta-map.js';
 import { metaTableChart } from '../src/charts/meta-table.js';
+import { playDrawChart } from '../src/charts/play-draw.js';
 import { themes } from '../src/charts/theme.js';
 import { trendsChart } from '../src/charts/trends.js';
 import { config } from '../src/config.js';
@@ -254,14 +255,45 @@ function matchupTableView(report) {
   );
 }
 
+function playDrawTableView(report) {
+  return table(
+    ['Deck', 'En commençant', 'En second', 'Écart', capitalize(report.unit.many)],
+    report.decks.map((d) => {
+      const { onPlay, onDraw } = d.playDraw;
+      return [
+        deckName(d.colors),
+        formatPct(onPlay.winRate),
+        formatPct(onDraw.winRate),
+        onPlay.winRate == null || onDraw.winRate == null
+          ? '—'
+          : `${formatDelta(onPlay.winRate - onDraw.winRate)} pts`,
+        `${formatInt(Math.round(onPlay.games))} / ${formatInt(Math.round(onDraw.games))}`,
+      ];
+    }),
+  );
+}
+
 // --- Charts ---
+
+const openedTables = () =>
+  new Set([...$('charts').querySelectorAll('details[open]')].map((d) => d.closest('figure').id));
+
+function card({ id, svg, table: tableNode, controls }, opened) {
+  const figure = el('figure', { class: 'card', id });
+  if (controls) figure.append(controls);
+  const details = el('details', { class: 'table-view' });
+  if (opened.has(id)) details.open = true;
+  const scroll = el('div', { class: 'table-scroll' });
+  scroll.append(tableNode);
+  details.append(el('summary', {}, 'Voir les données en tableau'), scroll);
+  figure.append(svg, details);
+  return figure;
+}
 
 function renderCharts(report) {
   const theme = darkQuery.matches ? themes.dark : themes.light;
   const container = $('charts');
-  const opened = new Set(
-    [...container.querySelectorAll('details[open]')].map((d) => d.closest('figure').id),
-  );
+  const opened = openedTables();
 
   const charts = [
     { id: 'meta', svg: metaTableChart(report, { document, theme }), table: metaTableView(report) },
@@ -278,24 +310,18 @@ function renderCharts(report) {
       table: matchupTableView(report),
     },
     {
+      id: 'premier',
+      svg: playDrawChart(report, { document, theme }),
+      table: playDrawTableView(report),
+    },
+    {
       id: 'winrate',
       svg: trendsChart(report, { document, theme, metric: 'winRate' }),
       table: trendTableView(report, 'winRate'),
     },
   ];
 
-  container.replaceChildren(
-    ...charts.map(({ id, svg, table: tableNode }) => {
-      const figure = el('figure', { class: 'card', id });
-      const details = el('details', { class: 'table-view' });
-      if (opened.has(id)) details.open = true;
-      const scroll = el('div', { class: 'table-scroll' });
-      scroll.append(tableNode);
-      details.append(el('summary', {}, 'Voir les données en tableau'), scroll);
-      figure.append(svg, details);
-      return figure;
-    }),
-  );
+  container.replaceChildren(...charts.map((chart) => card(chart, opened)));
 }
 
 function showError(error) {

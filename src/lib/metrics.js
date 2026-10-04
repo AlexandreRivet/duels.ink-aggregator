@@ -139,6 +139,38 @@ export function matchupFor(agg, row, col) {
 
 const rate = ({ games, wins }) => (games > 0 ? (100 * wins) / games : null);
 
+/**
+ * A deck's results when it goes first and when it goes second, summed over its matchup rows.
+ * A mirror game is counted once, from seat A, which is a random seat.
+ */
+export function playDrawFor(agg, key) {
+  const onPlay = { games: 0, wins: 0 };
+  const onDraw = { games: 0, wins: 0 };
+  for (const row of agg.matchups.values()) {
+    if (row.a !== key && row.b !== key) continue;
+    const m = matchupFor(agg, key, row.a === key ? row.b : row.a);
+    onPlay.games += m.onPlay.games;
+    onPlay.wins += m.onPlay.wins;
+    onDraw.games += m.onDraw.games;
+    onDraw.wins += m.onDraw.wins;
+  }
+  const withRate = (c) => ({ ...c, winRate: rate(c), ci: wilson(c.wins, c.games) });
+  return { onPlay: withRate(onPlay), onDraw: withRate(onDraw) };
+}
+
+/** Share of games won by the player who goes first (in BO3: who starts game 1). */
+export function firstPlayerWinRate(agg) {
+  let games = 0;
+  let wins = 0;
+  for (const row of agg.matchups.values()) {
+    games += row.games;
+    // A's wins on the play, plus B's wins on the play (games A started second and didn't win).
+    wins +=
+      row.firstPlayerWins + (row.games - row.firstPlayerGames) - (row.winsA - row.firstPlayerWins);
+  }
+  return games ? (100 * wins) / games : null;
+}
+
 /** Era (card set) in force at the end of a week. */
 function eraAt(eras, isoDay) {
   return eras.filter((era) => era.startedAt.slice(0, 10) <= isoDay).at(-1) ?? null;
@@ -244,6 +276,8 @@ export function buildReport({ index, snapshots, weekStart, options = {} }) {
     }),
   );
 
+  for (const deck of decks) deck.playDraw = playDrawFor(matchupAgg, deck.key);
+
   const withPrev = decks.filter((d) => d.deltaPlayRate != null);
   const summary = {
     topDeck: decks[0] ?? null,
@@ -266,6 +300,7 @@ export function buildReport({ index, snapshots, weekStart, options = {} }) {
   return {
     queue: index.queue,
     queueName: index.queueName ?? index.queue,
+    gameMode: perMatch ? 'bo3' : 'bo1',
     unit: perMatch ? UNITS.match : UNITS.game,
     options: opts,
     era: era ? { key: era.key, name: era.name } : null,
@@ -282,6 +317,7 @@ export function buildReport({ index, snapshots, weekStart, options = {} }) {
       weeks: matchupStarts,
       endDate: target.week.endDate,
       sampleSize: sumSize(matchupSnapshots),
+      firstPlayerWinRate: firstPlayerWinRate(matchupAgg),
       updatedAt: matchupAgg.updatedAt,
       decks: matchupDecks,
       cells,
