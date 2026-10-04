@@ -7,7 +7,7 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
-import { matchupsChart } from '../src/charts/matchups.js';
+import { evolutionChart } from '../src/charts/evolution.js';
 import { metaMapChart } from '../src/charts/meta-map.js';
 import { metaTableChart } from '../src/charts/meta-table.js';
 import { moversChart } from '../src/charts/movers.js';
@@ -46,14 +46,14 @@ if (!indexes.length) {
 
 const document = createDocument();
 
-async function renderDigest(report, dir) {
+async function renderDigest(report, trendReport, dir) {
   const images = [
     // A weekly digest compares with the previous week. Discord shows at most 4 images in a
-    // card's grid: the long-term trends and play/draw stay on the page.
+    // card's grid: matchups, play/draw and the long-term trends stay on the page.
     { file: 'meta.png', svg: metaTableChart(report, { document, theme }) },
     { file: 'carte.png', svg: metaMapChart(report, { document, theme }) },
     { file: 'mouvements.png', svg: moversChart(report, { document, theme }) },
-    { file: 'matchups.png', svg: matchupsChart(report, { document, theme }) },
+    { file: 'evolution.png', svg: evolutionChart(trendReport, { document, theme }) },
   ];
   await mkdir(dir, { recursive: true });
   for (const image of images) {
@@ -96,7 +96,14 @@ for (const format of FORMATS) {
   }
 
   const dir = path.join(OUT_DIR, format);
-  const digest = await renderDigest(report, dir);
+  // Same week, with the trend window cut to the week and the one before
+  const trendReport = buildReport({
+    index,
+    snapshots,
+    weekStart: args.week,
+    options: { trendWeeks: config.digestTrendWeeks },
+  });
+  const digest = await renderDigest(report, trendReport, dir);
   const { title, description } = digest.card;
   console.log(`${title}\n${description}\n→ ${path.relative(process.cwd(), dir)}/\n`);
   summary.rendered.push({ format, queue: report.queue, week: report.week.startDate });

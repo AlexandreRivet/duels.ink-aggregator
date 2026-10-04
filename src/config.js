@@ -23,6 +23,9 @@ export const config = {
   /** Number of weeks shown in the trend chart. */
   trendWeeks: 12,
 
+  /** Weeks in the Discord digest's trend chart: the week and the one before. */
+  digestTrendWeeks: 2,
+
   /** Weeks summed for the matchup matrix (a single week is too thin). */
   matchupWeeks: 4,
 
