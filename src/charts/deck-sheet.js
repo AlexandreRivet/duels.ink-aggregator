@@ -16,8 +16,10 @@ import {
   footer,
   header,
   hitArea,
+  inkChips,
   legendDot,
   middle,
+  textWidth,
 } from './common.js';
 
 const ROW_HEIGHT = 28;
@@ -35,16 +37,24 @@ export function deckSheetChart(report, deckKey, { document, theme, width = 800 }
   const { unit } = report;
   const minGames = report.options.minMatchupGames;
   const name = deckName(deck.colors);
-  const title = `Fiche deck : ${name}`;
-  const svg = createSvg(document, { width, title, theme });
+  // The <title> keeps the name; the visible title shows the deck's chips
+  const svg = createSvg(document, { width, title: `Fiche deck : ${name}`, theme });
 
   let y = header(svg, {
-    title,
+    title: 'Fiche deck',
     subtitle: `Win rate contre chaque deck · ${report.queueName} · ${formatWeekRange(
       weeks[0],
       endDate,
     )}`,
     theme,
+  });
+
+  inkChips(svg, deck.colors, {
+    x: PAD + textWidth('Fiche deck', 20) + 14,
+    y: PAD + 16 - middle(20),
+    theme,
+    r: 8,
+    name,
   });
 
   const { onPlay, onDraw } = deck.playDraw;
@@ -76,9 +86,9 @@ export function deckSheetChart(report, deckKey, { document, theme, width = 800 }
 
   const col = {
     deck: PAD,
-    freq: 268,
-    plotFrom: 292,
-    plotTo: 620,
+    freq: 110,
+    plotFrom: 138,
+    plotTo: 610,
     value: 690,
     games: width - PAD,
   };
