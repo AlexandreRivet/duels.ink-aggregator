@@ -9,7 +9,8 @@ Weekly tracking of the Lorcana meta from the public statistics of
   BO1 and one for BO3, to prepare the team's training session that evening.
 
 The code and docs are in English; the charts, the page and the Discord message are in French,
-for the team.
+for the team. Decks are shown by their two ink chips (coloured-circle emoji in the Discord
+text); names remain in tooltips and for screen readers.
 
 > Data: © Duels.ink — `updatedAt` and the number of games are shown under every chart, with a
 > link to https://duels.ink/stats, as the API docs ask.
