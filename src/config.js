@@ -14,11 +14,8 @@ export const config = {
   /** A deck only appears in the charts above this play rate (%). */
   minPlayRate: 1,
 
-  /** Number of weeks shown in the trend charts. */
+  /** Number of weeks shown in the trend chart. */
   trendWeeks: 12,
-
-  /** Decks shown in the small-multiple trend charts (3-column grid). */
-  trendDecks: 9,
 
   /** Weeks summed for the matchup matrix (a single week is too thin). */
   matchupWeeks: 4,

@@ -1,11 +1,11 @@
 import { deckSheetChart } from '../src/charts/deck-sheet.js';
+import { evolutionChart } from '../src/charts/evolution.js';
 import { matchupsChart } from '../src/charts/matchups.js';
 import { metaMapChart } from '../src/charts/meta-map.js';
 import { metaTableChart } from '../src/charts/meta-table.js';
 import { moversChart } from '../src/charts/movers.js';
 import { playDrawChart } from '../src/charts/play-draw.js';
 import { themes } from '../src/charts/theme.js';
-import { trendsChart } from '../src/charts/trends.js';
 import { config } from '../src/config.js';
 import {
   formatCount,
@@ -244,12 +244,12 @@ function metaTableView(report) {
   );
 }
 
-function trendTableView(report, metric) {
+function evolutionTableView(report) {
   return table(
-    ['Deck', ...report.trend.weeks.map(formatDay)],
+    ['Deck', ...report.trend.weeks.map((w) => `${formatDay(w)} · popularité / win rate`)],
     report.decks.map((d) => [
       chips(d.colors),
-      ...d.history.map((p) => formatPct(metric === 'playRate' ? p.playRate : p.winRate)),
+      ...d.history.map((p) => `${formatPct(p.playRate)} / ${formatPct(p.winRate)}`),
     ]),
   );
 }
@@ -407,9 +407,9 @@ function renderCharts(report) {
       table: moversTableView(report),
     },
     {
-      id: 'popularite',
-      svg: trendsChart(report, { document, theme, metric: 'playRate' }),
-      table: trendTableView(report, 'playRate'),
+      id: 'evolution',
+      svg: evolutionChart(report, { document, theme }),
+      table: evolutionTableView(report),
     },
     {
       id: 'matchups',
@@ -420,11 +420,6 @@ function renderCharts(report) {
       id: 'premier',
       svg: playDrawChart(report, { document, theme }),
       table: playDrawTableView(report),
-    },
-    {
-      id: 'winrate',
-      svg: trendsChart(report, { document, theme, metric: 'winRate' }),
-      table: trendTableView(report, 'winRate'),
     },
   ];
 

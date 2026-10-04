@@ -36,10 +36,9 @@ Discord gets the charts that compare the week with the previous one (S−1):
 | Carte du méta                | Each deck's ink chips at play rate × win rate, with an arrow from where it stood last week | ✓       |
 | Mouvements de la semaine     | Change in play rate and in win rate per deck, coloured only when it beats the noise        | ✓       |
 | Matchups — 4 semaines        | Win rate of the row deck against the column deck; ▲▼ when this week clearly differs        | ✓       |
-| Popularité — 12 semaines     | One small chart per deck (9 most played), same scale, set releases marked                  |         |
+| Évolution — 12 semaines      | Each deck's play rate (left scale) and win rate (right scale) week by week, on one plot    |         |
 | Fiche deck                   | One deck (picked on the page) against every other deck, most frequent opponents first      |         |
 | Commencer ou jouer en second | Each deck's win rate going first and going second, and the gap                             |         |
-| Win rate — 12 semaines       | Same grid as play rate, with the uncertainty band and a 50% reference line                 |         |
 
 Settings (collected queues, number of weeks, thresholds) live in [src/config.js](src/config.js).
 
