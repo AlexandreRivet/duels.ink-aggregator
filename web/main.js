@@ -4,6 +4,7 @@ import { themes } from '../src/charts/theme.js';
 import { trendsChart } from '../src/charts/trends.js';
 import { config } from '../src/config.js';
 import {
+  formatCount,
   formatDay,
   formatDelta,
   formatInt,
@@ -12,7 +13,7 @@ import {
   formatWeekRange,
 } from '../src/lib/format.js';
 import { INKS, deckName } from '../src/lib/inks.js';
-import { buildReport } from '../src/lib/metrics.js';
+import { buildReport, countsMatches, sampleSize } from '../src/lib/metrics.js';
 import { pickFeaturedQueue } from '../src/lib/queues.js';
 
 const BASE = import.meta.env.BASE_URL;
@@ -117,14 +118,18 @@ async function setupFilters() {
   });
 }
 
-function fillWeekSelect(index, selected) {
-  const weeks = [...index.weeks].reverse();
+function fillWeekSelect(index, snapshots, unit, selected) {
+  const perMatch = countsMatches(index);
+  const weeks = [...snapshots].reverse();
   $('week').replaceChildren(
-    ...weeks.map((w) =>
+    ...weeks.map((snapshot) =>
       el(
         'option',
-        { value: w.startDate },
-        `${formatWeekRange(w.startDate, w.endDate)} · ${formatInt(w.totalGames)} parties`,
+        { value: snapshot.week.startDate },
+        `${formatWeekRange(snapshot.week.startDate, snapshot.week.endDate)} · ${formatCount(
+          sampleSize(snapshot, perMatch),
+          unit,
+        )}`,
       ),
     ),
   );
@@ -154,13 +159,13 @@ function kpi(label, value, detail) {
 }
 
 function renderKpis(report) {
-  const { week, previousWeek, summary } = report;
+  const { week, previousWeek, summary, unit } = report;
   const { topDeck, risers, bestWinRate } = summary;
-  const volumeChange = previousWeek?.totalGames
-    ? `${formatDelta((100 * (week.totalGames - previousWeek.totalGames)) / previousWeek.totalGames)} % vs semaine précédente`
+  const volumeChange = previousWeek?.sampleSize
+    ? `${formatDelta((100 * (week.sampleSize - previousWeek.sampleSize)) / previousWeek.sampleSize)} % vs semaine précédente`
     : null;
 
-  const tiles = [kpi('Parties jouées', formatInt(week.totalGames), volumeChange)];
+  const tiles = [kpi(unit.played, formatInt(week.sampleSize), volumeChange)];
   if (topDeck) {
     tiles.push(kpi('Deck le plus joué', topDeck, `${formatPct(topDeck.playRate)} des decks`));
   }
@@ -191,6 +196,8 @@ function renderKpis(report) {
 
 // --- Table views: every chart has an equivalent readable without colour or hover ---
 
+const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1);
+
 function table(headers, rows) {
   const node = el('table');
   const head = node.createTHead().insertRow();
@@ -207,7 +214,7 @@ function table(headers, rows) {
 
 function metaTableView(report) {
   return table(
-    ['Deck', 'Popularité', 'Δ pts vs S−1', 'Win rate', 'IC 95 %', 'Parties'],
+    ['Deck', 'Popularité', 'Δ pts vs S−1', 'Win rate', 'IC 95 %', capitalize(report.unit.many)],
     report.decks.map((d) => [
       deckName(d.colors),
       formatPct(d.playRate),
@@ -309,7 +316,7 @@ async function render() {
       options: { matchupWeeks: state.matchupWeeks },
     });
     lastReport = report;
-    fillWeekSelect(index, report.week.startDate);
+    fillWeekSelect(index, snapshots, report.unit, report.week.startDate);
     const collected = index.weeks.length > 1 ? 'semaines collectées' : 'semaine collectée';
     $('subtitle').textContent =
       `${report.queueName} · ${index.weeks.length} ${collected} · données duels.ink du ${formatUpdatedAt(report.week.updatedAt)}`;

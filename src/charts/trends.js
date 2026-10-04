@@ -4,7 +4,7 @@
  * metric = 'playRate' or 'winRate' (with a confidence-interval band).
  */
 import { area, extent, line, max, scaleLinear } from 'd3';
-import { formatDay, formatDelta, formatInt, formatPct } from '../lib/format.js';
+import { formatCount, formatDay, formatDelta, formatPct } from '../lib/format.js';
 import { deckName } from '../lib/inks.js';
 import { PAD, createSvg, deckLabel, finalize, footer, header, hitArea, middle } from './common.js';
 
@@ -34,6 +34,7 @@ export function trendsChart(
 ) {
   const spec = METRICS[metric];
   const { weeks, eraMarkers } = report.trend;
+  const { unit } = report;
   const decks = report.decks.slice(0, count ?? report.options.trendDecks);
   const title = spec.title(weeks.length > 1 ? `${weeks.length} dernières semaines` : 'semaine');
   const svg = createSvg(document, { width, title, theme });
@@ -239,12 +240,12 @@ export function trendsChart(
         metric === 'playRate'
           ? `${formatPct(p.playRate)} des decks`
           : p.winRate == null
-            ? 'Pas de parties'
+            ? 'Pas joué cette semaine'
             : `${formatPct(p.winRate)} de victoires`;
       const extra =
         metric === 'winRate' && p.ci
-          ? `IC 95 % : ${formatPct(p.ci[0])} – ${formatPct(p.ci[1])} · ${formatInt(p.games)} parties`
-          : `${formatInt(p.games)} parties`;
+          ? `IC 95 % : ${formatPct(p.ci[0])} – ${formatPct(p.ci[1])} · ${formatCount(p.games, unit)}`
+          : formatCount(p.games, unit);
       hitArea(plot, {
         x: Math.max(plotLeft - step / 2, x(p.idx) - step / 2),
         y: 0,
@@ -261,7 +262,8 @@ export function trendsChart(
     y: bottom,
     theme,
     updatedAt: report.week.updatedAt,
-    totalGames: report.trend.totalGames,
+    sampleSize: report.trend.sampleSize,
+    unit,
     note: `Semaines du ${formatDay(weeks[0])} au ${formatDay(report.trend.endDate)} · les ${decks.length} decks les plus joués la dernière semaine`,
   });
   return finalize(svg, height);

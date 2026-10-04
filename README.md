@@ -44,6 +44,9 @@ first one that has data for the last finished week; the page lets you switch to 
 During a set's beta, put the beta queue first: when duels.ink closes it at release, it stops
 getting new weeks and the next queue takes over on its own.
 
+In BO3 queues the API counts decks and matchups in **matches** (and `activity.totalGames` in
+single games): win rates are match win rates, and every count is shown as "matchs".
+
 ## Setup
 
 ```bash

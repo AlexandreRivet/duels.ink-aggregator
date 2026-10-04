@@ -3,6 +3,7 @@
  * Pure functions: no dependency on the file system or the DOM.
  */
 import { config as defaults } from '../config.js';
+import { UNITS } from './format.js';
 import { deckKey } from './inks.js';
 
 const DAY_MS = 86_400_000;
@@ -29,11 +30,9 @@ export function winRateSignal(ci) {
 export function aggregate(snapshots) {
   const decks = new Map();
   const matchups = new Map();
-  let totalGames = 0;
   let updatedAt = null;
 
   for (const snapshot of snapshots) {
-    totalGames += snapshot.totalGames;
     if (!updatedAt || snapshot.updatedAt > updatedAt) updatedAt = snapshot.updatedAt;
 
     for (const pair of snapshot.colorPairs) {
@@ -64,7 +63,22 @@ export function aggregate(snapshots) {
     }
   }
 
-  return { totalGames, updatedAt, decks, matchups };
+  return { updatedAt, decks, matchups };
+}
+
+/** True for BO3 queues, where decks and matchups are counted in matches rather than games. */
+export function countsMatches(index) {
+  return (index.gameMode ?? (index.queue.includes('bo3') ? 'bo3' : 'bo1')) === 'bo3';
+}
+
+/**
+ * A week's sample size in the queue's unit. In BO3 queues activity.totalGames counts single
+ * games while decks and matchups count matches; each match has two decks, so matches = deck
+ * counts / 2.
+ */
+export function sampleSize(snapshot, perMatch) {
+  if (!perMatch) return snapshot.totalGames;
+  return snapshot.colorPairs.reduce((total, pair) => total + pair.games, 0) / 2;
 }
 
 /**
@@ -245,26 +259,29 @@ export function buildReport({ index, snapshots, weekStart, options = {} }) {
     bestWinRate: [...decks].sort((a, b) => b.ci[0] - a.ci[0])[0] ?? null,
   };
 
-  const sumGames = (list) => list.reduce((total, s) => total + s.totalGames, 0);
+  const perMatch = countsMatches(index);
+  const size = (snapshot) => sampleSize(snapshot, perMatch);
+  const sumSize = (list) => list.reduce((total, snapshot) => total + size(snapshot), 0);
 
   return {
     queue: index.queue,
     queueName: index.queueName ?? index.queue,
+    unit: perMatch ? UNITS.match : UNITS.game,
     options: opts,
     era: era ? { key: era.key, name: era.name } : null,
-    week: { ...target.week, totalGames: target.totalGames, updatedAt: target.updatedAt },
-    previousWeek: previous ? { ...previous.week, totalGames: previous.totalGames } : null,
+    week: { ...target.week, sampleSize: size(target), updatedAt: target.updatedAt },
+    previousWeek: previous ? { ...previous.week, sampleSize: size(previous) } : null,
     decks,
     trend: {
       weeks: trendStarts,
       endDate: target.week.endDate,
-      totalGames: sumGames(trendStarts.map((start) => byStart.get(start))),
+      sampleSize: sumSize(trendStarts.map((start) => byStart.get(start))),
       eraMarkers,
     },
     matchups: {
       weeks: matchupStarts,
       endDate: target.week.endDate,
-      totalGames: matchupAgg.totalGames,
+      sampleSize: sumSize(matchupSnapshots),
       updatedAt: matchupAgg.updatedAt,
       decks: matchupDecks,
       cells,

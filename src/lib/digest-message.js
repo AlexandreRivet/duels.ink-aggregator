@@ -2,16 +2,16 @@
  * Text of the Discord message posted with the Monday charts (in French, for the team).
  */
 import { SOURCE_URL } from '../config.js';
-import { formatDelta, formatInt, formatPct, formatUpdatedAt, formatWeekRange } from './format.js';
+import { formatCount, formatDelta, formatPct, formatUpdatedAt, formatWeekRange } from './format.js';
 import { deckName } from './inks.js';
 
 export function buildDigestMessage(report) {
-  const { week, previousWeek, summary } = report;
+  const { week, previousWeek, summary, unit } = report;
   const lines = [`## Méta ${report.queueName} · ${formatWeekRange(week.startDate, week.endDate)}`];
 
-  let volume = `${formatInt(week.totalGames)} parties`;
-  if (previousWeek?.totalGames) {
-    const change = (100 * (week.totalGames - previousWeek.totalGames)) / previousWeek.totalGames;
+  let volume = formatCount(week.sampleSize, unit);
+  if (previousWeek?.sampleSize) {
+    const change = (100 * (week.sampleSize - previousWeek.sampleSize)) / previousWeek.sampleSize;
     volume += ` (${formatDelta(change)} % vs semaine précédente)`;
   }
   lines.push(volume, '');
@@ -28,9 +28,10 @@ export function buildDigestMessage(report) {
     lines.push(
       `**Meilleur win rate** : ${deckName(bestWinRate.colors)} — ${formatPct(
         bestWinRate.winRate,
-      )} (IC 95 % ${formatPct(bestWinRate.ci[0])}–${formatPct(bestWinRate.ci[1])}, ${formatInt(
+      )} (IC 95 % ${formatPct(bestWinRate.ci[0])}–${formatPct(bestWinRate.ci[1])}, ${formatCount(
         bestWinRate.games,
-      )} parties)`,
+        unit,
+      )})`,
     );
   }
 

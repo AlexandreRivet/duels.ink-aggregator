@@ -18,6 +18,15 @@ const one = locale.format(',.1f');
 const signedOne = locale.format('+,.1f');
 
 export const formatInt = (v) => int(v);
+
+/** What the counts measure: games in BO1 queues, matches in BO3 ones. */
+export const UNITS = {
+  game: { one: 'partie', many: 'parties', played: 'Parties jouées' },
+  match: { one: 'match', many: 'matchs', played: 'Matchs joués' },
+};
+
+/** "57 550 parties", "1 match". */
+export const formatCount = (v, unit) => `${int(v)} ${Math.abs(v) >= 2 ? unit.many : unit.one}`;
 export const formatPct = (v, digits = 1) =>
   v == null || Number.isNaN(v) ? '—' : `${locale.format(`,.${digits}f`)(v)}${NBSP}%`;
 export const formatNumber1 = (v) => one(v);

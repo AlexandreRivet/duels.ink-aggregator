@@ -4,7 +4,7 @@
  * 50%, cells greyed out when the sample is too small.
  */
 import { interpolateLab, piecewise, rgb, scaleDiverging } from 'd3';
-import { formatDay, formatInt, formatPct, formatWeekRange } from '../lib/format.js';
+import { formatCount, formatDay, formatPct, formatWeekRange } from '../lib/format.js';
 import { deckName, inkName } from '../lib/inks.js';
 import {
   PAD,
@@ -51,7 +51,8 @@ export function matchupColorScale(theme) {
 }
 
 export function matchupsChart(report, { document, theme, width = 800 }) {
-  const { decks, cells, weeks, totalGames, updatedAt, endDate } = report.matchups;
+  const { decks, cells, weeks, sampleSize, updatedAt, endDate } = report.matchups;
+  const { unit } = report;
   const minGames = report.options.minMatchupGames;
   const title = `Matchups — ${weeks.length > 1 ? `${weeks.length} dernières semaines` : 'semaine'}`;
   const svg = createSvg(document, { width, title, theme });
@@ -104,18 +105,18 @@ export function matchupsChart(report, { document, theme, width = 800 }) {
           cell.onPlay?.winRate != null
             ? `Miroir · ${formatPct(cell.onPlay.winRate)} pour le joueur qui commence`
             : 'Miroir',
-          `${formatInt(cell.games)} parties`,
+          formatCount(cell.games, unit),
         );
       } else if (cell.winRate == null) {
-        tip.push('Aucune partie');
+        tip.push('Jamais joué sur la période');
       } else {
-        tip.push(`${formatPct(cell.winRate)} de victoires sur ${formatInt(cell.games)} parties`);
+        tip.push(`${formatPct(cell.winRate)} de victoires sur ${formatCount(cell.games, unit)}`);
         if (cell.onPlay?.winRate != null && cell.onDraw?.winRate != null) {
           tip.push(
             `En commençant : ${formatPct(cell.onPlay.winRate)} · en second : ${formatPct(cell.onDraw.winRate)}`,
           );
         }
-        if (!enough) tip.push(`Moins de ${minGames} parties : non coloré`);
+        if (!enough) tip.push(`Moins de ${minGames} ${unit.many} : non coloré`);
       }
 
       g.append('rect')
@@ -198,13 +199,14 @@ export function matchupsChart(report, { document, theme, width = 800 }) {
     .attr('y', legendTop + 5 + middle(11))
     .attr('font-size', 11)
     .attr('fill', theme.text2)
-    .text(`— : moins de ${minGames} parties`);
+    .text(`— : moins de ${minGames} ${unit.many}`);
 
   const height = footer(svg, {
     y: legendTop + 50,
     theme,
     updatedAt,
-    totalGames,
+    sampleSize,
+    unit,
     note: `Semaines du ${formatDay(weeks[0])} au ${formatDay(endDate)}${
       report.era ? ', sans remonter avant la sortie du set en cours' : ''
     }`,

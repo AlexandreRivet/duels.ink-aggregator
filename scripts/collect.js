@@ -85,6 +85,10 @@ for (const queue of queues) {
   }
 
   const snapshots = await readAllWeeks(queue);
+  // A closed beta queue moves from the active list to the archived one.
+  const info = [...(meta.queues?.active ?? []), ...(meta.queues?.archived ?? [])].find(
+    (q) => q.id === queue,
+  );
   const eras = [meta.eras?.currentEra, ...(meta.eras?.pastEras ?? [])]
     .filter(Boolean)
     .map(({ key, name, startedAt, endedAt }) => ({
@@ -97,7 +101,9 @@ for (const queue of queues) {
 
   await writeIndex(queue, {
     queue,
-    queueName: meta.queues?.active?.find((q) => q.id === queue)?.name ?? queue,
+    queueName: info?.name ?? queue,
+    // bo1 | bo3: in BO3 queues, decks and matchups are counted in matches.
+    gameMode: info?.gameMode ?? null,
     eras,
     weeks: snapshots.map((s) => ({
       ...s.week,

@@ -4,7 +4,7 @@
  * interval (the dot is only coloured when the gap to 50% is significant).
  */
 import { max, min, scaleLinear } from 'd3';
-import { formatDelta, formatInt, formatPct, formatWeekRange } from '../lib/format.js';
+import { formatCount, formatDelta, formatInt, formatPct, formatWeekRange } from '../lib/format.js';
 import { deckName } from '../lib/inks.js';
 import {
   PAD,
@@ -29,15 +29,16 @@ export const SIGNAL_LABELS = {
 };
 
 export function metaTableChart(report, { document, theme, width = 800 }) {
-  const { decks, week } = report;
+  const { decks, week, unit } = report;
   const title = 'Méta de la semaine';
   const svg = createSvg(document, { width, title, theme });
 
   let y = header(svg, {
     title,
-    subtitle: `${report.queueName} · ${formatWeekRange(week.startDate, week.endDate)} · ${formatInt(
-      week.totalGames,
-    )} parties`,
+    subtitle: `${report.queueName} · ${formatWeekRange(week.startDate, week.endDate)} · ${formatCount(
+      week.sampleSize,
+      unit,
+    )}`,
     theme,
   });
 
@@ -91,7 +92,7 @@ export function metaTableChart(report, { document, theme, width = 800 }) {
   columnHeader(col.bar, 'POPULARITÉ');
   columnHeader(col.delta, 'Δ PTS', 'end');
   columnHeader(col.dotsFrom, 'WIN RATE · IC 95 %');
-  columnHeader(col.games, 'PARTIES', 'end');
+  columnHeader(col.games, unit.many.toUpperCase(), 'end');
 
   const top = y + 10;
   const rowsHeight = decks.length * ROW_HEIGHT;
@@ -204,7 +205,7 @@ export function metaTableChart(report, { document, theme, width = 800 }) {
         deckName(deck.colors),
         `${formatPct(deck.winRate)} de victoires`,
         `IC 95 % : ${formatPct(deck.ci[0])} – ${formatPct(deck.ci[1])}`,
-        `${formatPct(deck.playRate)} des decks · ${formatInt(deck.games)} parties`,
+        `${formatPct(deck.playRate)} des decks · ${formatCount(deck.games, unit)}`,
         deck.deltaPlayRate == null
           ? 'Absent la semaine précédente'
           : `${formatDelta(deck.deltaPlayRate)} pt vs semaine précédente`,
@@ -230,7 +231,8 @@ export function metaTableChart(report, { document, theme, width = 800 }) {
     y: ly + 30,
     theme,
     updatedAt: week.updatedAt,
-    totalGames: week.totalGames,
+    sampleSize: week.sampleSize,
+    unit,
     note: 'Δ pts : évolution de la popularité vs la semaine précédente · trait : intervalle de confiance à 95 % du win rate',
   });
   return finalize(svg, height);

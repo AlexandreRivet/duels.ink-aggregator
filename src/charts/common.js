@@ -5,7 +5,7 @@
  */
 import { select } from 'd3';
 import { SOURCE_URL } from '../config.js';
-import { formatInt, formatUpdatedAt } from '../lib/format.js';
+import { formatCount, formatUpdatedAt } from '../lib/format.js';
 import { INKS, deckName } from '../lib/inks.js';
 import { FONT_FAMILY } from './theme.js';
 
@@ -58,10 +58,10 @@ export function header(svg, { title, subtitle, theme }) {
 }
 
 /** Source line, required by the API's terms. Returns the final height. */
-export function footer(svg, { y, theme, updatedAt, totalGames, note }) {
+export function footer(svg, { y, theme, updatedAt, sampleSize, unit, note }) {
   const source = `Source : ${SOURCE_URL.replace('https://', '')} · données du ${formatUpdatedAt(
     updatedAt,
-  )} · ${formatInt(totalGames)} parties`;
+  )} · ${formatCount(sampleSize, unit)}`;
   let line = y;
   if (note) {
     svg
