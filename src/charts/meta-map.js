@@ -6,7 +6,7 @@
  */
 import { max, median, min, scaleLinear } from 'd3';
 import { formatCount, formatPct, formatWeekRange } from '../lib/format.js';
-import { deckName } from '../lib/inks.js';
+import { INKS, deckName } from '../lib/inks.js';
 import { PAD, createSvg, finalize, footer, header, inkChips, middle } from './common.js';
 
 const PLOT_HEIGHT = 400;
@@ -145,7 +145,9 @@ export function metaMapChart(report, { document, theme, width = 800 }) {
     });
   });
 
-  // Arrows first, so the chips sit on top: from last week's position to this week's
+  // Arrows first, so the chips sit on top: from last week's position to this week's, in the
+  // deck's colours (first ink at the start, second at the chips) so close arrows stay apart
+  const defs = svg.append('defs');
   for (const m of markers) {
     const { deck } = m;
     if (!deck.previous) continue;
@@ -160,23 +162,40 @@ export function metaMapChart(report, { document, theme, width = 800 }) {
     // Stop short of the chips, and draw the head by hand (no SVG markers needed)
     const tipX = m.x - ux * (m.width / 2 + 3);
     const tipY = m.y - uy * (m.width / 2 + 3);
-    const arrow = svg.append('g').attr('opacity', 0.75);
+    const [first, second = first] = deck.colors.map((ink) => INKS[ink]?.color ?? theme.text2);
+    let stroke = first;
+    if (second !== first) {
+      // In user space: a bounding-box gradient would vanish on a horizontal or vertical line
+      const id = `arrow-${theme.name}-${deck.key.replace(/\W/g, '-')}`;
+      const gradient = defs
+        .append('linearGradient')
+        .attr('id', id)
+        .attr('gradientUnits', 'userSpaceOnUse')
+        .attr('x1', fromX)
+        .attr('y1', fromY)
+        .attr('x2', tipX)
+        .attr('y2', tipY);
+      gradient.append('stop').attr('offset', '0%').attr('stop-color', first);
+      gradient.append('stop').attr('offset', '100%').attr('stop-color', second);
+      stroke = `url(#${id})`;
+    }
+    const arrow = svg.append('g').attr('opacity', 0.9);
     arrow
       .append('circle')
       .attr('cx', fromX)
       .attr('cy', fromY)
-      .attr('r', 2.5)
+      .attr('r', 3)
       .attr('fill', 'none')
-      .attr('stroke', theme.text2)
+      .attr('stroke', first)
       .attr('stroke-width', 1.5);
     arrow
       .append('line')
-      .attr('x1', fromX + ux * 2.5)
-      .attr('y1', fromY + uy * 2.5)
+      .attr('x1', fromX + ux * 3)
+      .attr('y1', fromY + uy * 3)
       .attr('x2', tipX - ux * 5)
       .attr('y2', tipY - uy * 5)
-      .attr('stroke', theme.text2)
-      .attr('stroke-width', 1.5);
+      .attr('stroke', stroke)
+      .attr('stroke-width', 2);
     arrow
       .append('path')
       .attr(
@@ -185,7 +204,7 @@ export function metaMapChart(report, { document, theme, width = 800 }) {
           tipX - ux * 6 + uy * 3.5
         },${tipY - uy * 6 - ux * 3.5}Z`,
       )
-      .attr('fill', theme.text2);
+      .attr('fill', second);
   }
 
   // Most played first, so the smaller decks end up on top where markers overlap
@@ -225,7 +244,7 @@ export function metaMapChart(report, { document, theme, width = 800 }) {
     updatedAt: week.updatedAt,
     sampleSize: week.sampleSize,
     unit,
-    note: 'Pastilles : encres du deck · flèche : depuis la semaine précédente · pointillés : 50 % de victoires · en haut à droite : populaires et performants',
+    note: 'Pastilles : encres du deck · flèche aux couleurs du deck : depuis la semaine précédente · pointillés : 50 % de victoires',
   });
   return finalize(svg, height);
 }
