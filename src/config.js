@@ -11,7 +11,13 @@ export const config = {
   // Set 14 betas only for now: put core-bo1 back (first) when Set 14 is released.
   queues: ['quick-play-core-set14', 'core-bo3-set14'],
 
-  /** A deck only appears in the charts above this play rate (%). */
+  /**
+   * Decks shown everywhere — every chart, table, the deck picker and the Discord summary: the
+   * most played ones that week. Applied once, when the report is built.
+   */
+  topDecks: 12,
+
+  /** Floor under the top decks: a deck below this play rate (%) is never shown. */
   minPlayRate: 1,
 
   /** Number of weeks shown in the trend chart. */
@@ -19,9 +25,6 @@ export const config = {
 
   /** Weeks summed for the matchup matrix (a single week is too thin). */
   matchupWeeks: 4,
-
-  /** Decks shown in the matchup matrix. */
-  matchupDecks: 10,
 
   /** Below this, a matchup cell is greyed out: the win rate isn't reliable. */
   minMatchupGames: 100,

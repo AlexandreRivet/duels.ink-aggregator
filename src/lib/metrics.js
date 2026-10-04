@@ -285,8 +285,10 @@ export function buildReport({ index, snapshots, weekStart, options = {} }) {
   const seats = seatsOf(statsOf(target.week.startDate));
   const previousSeats = seatsOf(previousStats);
 
+  // The decks every chart shows: the most played ones (stats come sorted by play rate)
   const decks = [...statsOf(target.week.startDate).values()]
     .filter((deck) => deck.playRate >= opts.minPlayRate)
+    .slice(0, opts.topDecks)
     .map((deck) => {
       const prev = previousStats.get(deck.key);
       return {
@@ -331,8 +333,7 @@ export function buildReport({ index, snapshots, weekStart, options = {} }) {
   const weekAgg = aggregate([target]);
   const priorSnapshots = matchupSnapshots.filter((snapshot) => snapshot !== target);
   const priorAgg = priorSnapshots.length ? aggregate(priorSnapshots) : null;
-  const matchupDecks = decks.slice(0, opts.matchupDecks);
-  // Every pair of shown decks: the matrix uses the top ones, the deck sheet all of them.
+  // Every pair of shown decks, for the matrix and the deck sheet
   const cells = decks.flatMap((row) =>
     decks.map((col) => {
       const m = matchupFor(matchupAgg, row.key, col.key);
@@ -392,7 +393,7 @@ export function buildReport({ index, snapshots, weekStart, options = {} }) {
       sampleSize: sumSize(matchupSnapshots),
       firstPlayerWinRate: firstPlayerWinRate(matchupAgg),
       updatedAt: matchupAgg.updatedAt,
-      decks: matchupDecks,
+      decks,
       cells,
     },
     summary,

@@ -53,7 +53,7 @@ export function metaTableChart(report, { document, theme, width = 800 }) {
     subtitle: `${report.queueName} · ${formatWeekRange(week.startDate, week.endDate)} · ${formatCount(
       week.sampleSize,
       unit,
-    )}`,
+    )} · les ${decks.length} decks les plus joués`,
     theme,
   });
 

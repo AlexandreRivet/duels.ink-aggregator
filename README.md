@@ -37,10 +37,11 @@ Discord gets the charts that compare the week with the previous one (S−1):
 | Mouvements de la semaine     | Change in play rate and in win rate per deck, coloured only when it beats the noise        | ✓       |
 | Matchups — 4 semaines        | Win rate of the row deck against the column deck; ▲▼ when this week clearly differs        | ✓       |
 | Évolution — 12 semaines      | Each deck's play rate (left scale) and win rate (right scale) week by week, on one plot    |         |
-| Fiche deck                   | One deck (picked on the page) against every other deck, most frequent opponents first      |         |
+| Fiche deck                   | One deck (picked on the page) against the other shown decks, most frequent opponents first |         |
 | Commencer ou jouer en second | Each deck's win rate going first and going second, and the gap                             |         |
 
-Settings (collected queues, number of weeks, thresholds) live in [src/config.js](src/config.js).
+Settings (collected queues, number of decks shown — `topDecks`, the 12 most played, used by every
+chart, table and summary —, number of weeks, thresholds) live in [src/config.js](src/config.js).
 
 ### Queues and set betas
 
