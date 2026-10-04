@@ -1,0 +1,274 @@
+/**
+ * Computations on the weekly snapshots, shared by the digest (Node) and the web page.
+ * Pure functions: no dependency on the file system or the DOM.
+ */
+import { config as defaults } from '../config.js';
+import { deckKey } from './inks.js';
+
+const DAY_MS = 86_400_000;
+
+/** 95% Wilson confidence interval, as percentages. */
+export function wilson(wins, n, z = 1.96) {
+  if (!n) return [NaN, NaN];
+  const p = wins / n;
+  const z2 = z * z;
+  const denom = 1 + z2 / n;
+  const center = (p + z2 / (2 * n)) / denom;
+  const half = (z * Math.sqrt((p * (1 - p)) / n + z2 / (4 * n * n))) / denom;
+  return [100 * (center - half), 100 * (center + half)];
+}
+
+/** Where the win rate sits relative to 50%, accounting for uncertainty. */
+export function winRateSignal(ci) {
+  if (ci[0] > 50) return 'above';
+  if (ci[1] < 50) return 'below';
+  return 'neutral';
+}
+
+/** Sums the counters of several weekly snapshots. */
+export function aggregate(snapshots) {
+  const decks = new Map();
+  const matchups = new Map();
+  let totalGames = 0;
+  let updatedAt = null;
+
+  for (const snapshot of snapshots) {
+    totalGames += snapshot.totalGames;
+    if (!updatedAt || snapshot.updatedAt > updatedAt) updatedAt = snapshot.updatedAt;
+
+    for (const pair of snapshot.colorPairs) {
+      const key = deckKey(pair.colors);
+      const deck = decks.get(key) ?? { key, colors: pair.colors, games: 0, wins: 0 };
+      deck.games += pair.games;
+      deck.wins += pair.wins;
+      decks.set(key, deck);
+    }
+
+    for (const m of snapshot.matchups) {
+      const a = deckKey(m.colorsA);
+      const b = deckKey(m.colorsB);
+      const row = matchups.get(`${a}|${b}`) ?? {
+        a,
+        b,
+        games: 0,
+        winsA: 0,
+        firstPlayerGames: 0,
+        firstPlayerWins: 0,
+      };
+      row.games += m.games;
+      row.winsA += m.winsA;
+      row.firstPlayerGames += m.firstPlayerGames;
+      // The API only gives the rate: rebuild the number of wins.
+      row.firstPlayerWins += ((m.firstPlayerWinRate ?? 0) * m.firstPlayerGames) / 100;
+      matchups.set(`${a}|${b}`, row);
+    }
+  }
+
+  return { totalGames, updatedAt, decks, matchups };
+}
+
+/**
+ * Play rate, win rate and confidence interval per deck, most played first.
+ * Play rate is the share of decks played: each game counts two decks.
+ */
+export function deckStats(agg) {
+  let seats = 0;
+  for (const deck of agg.decks.values()) seats += deck.games;
+
+  return [...agg.decks.values()]
+    .map((deck) => {
+      const ci = wilson(deck.wins, deck.games);
+      return {
+        ...deck,
+        playRate: (100 * deck.games) / seats,
+        winRate: (100 * deck.wins) / deck.games,
+        ci,
+        signal: winRateSignal(ci),
+      };
+    })
+    .sort((x, y) => y.playRate - x.playRate);
+}
+
+/**
+ * Matchup from deck `row`'s point of view against deck `col`.
+ * The API stores each pair once (A < B): flip the numbers when `row` is side B.
+ * Draws, which are very rare, then count as wins for B.
+ */
+export function matchupFor(agg, row, col) {
+  const direct = agg.matchups.get(`${row}|${col}`);
+  if (direct) {
+    return {
+      games: direct.games,
+      wins: direct.winsA,
+      onPlay: { games: direct.firstPlayerGames, wins: direct.firstPlayerWins },
+      onDraw: {
+        games: direct.games - direct.firstPlayerGames,
+        wins: direct.winsA - direct.firstPlayerWins,
+      },
+    };
+  }
+
+  const flipped = agg.matchups.get(`${col}|${row}`);
+  if (!flipped) return null;
+  const drawGamesA = flipped.games - flipped.firstPlayerGames;
+  const drawWinsA = flipped.winsA - flipped.firstPlayerWins;
+  return {
+    games: flipped.games,
+    wins: flipped.games - flipped.winsA,
+    onPlay: { games: drawGamesA, wins: drawGamesA - drawWinsA },
+    onDraw: {
+      games: flipped.firstPlayerGames,
+      wins: flipped.firstPlayerGames - flipped.firstPlayerWins,
+    },
+  };
+}
+
+const rate = ({ games, wins }) => (games > 0 ? (100 * wins) / games : null);
+
+/** Era (card set) in force at the end of a week. */
+function eraAt(eras, isoDay) {
+  return eras.filter((era) => era.startedAt.slice(0, 10) <= isoDay).at(-1) ?? null;
+}
+
+/**
+ * Position of a dated event on an axis where point i stands for the middle of week i.
+ */
+function weekAxisPosition(weekStarts, isoDateTime) {
+  const t = new Date(isoDateTime).getTime();
+  const i = weekStarts.findLastIndex((start) => new Date(`${start}T00:00:00Z`).getTime() <= t);
+  if (i < 0) return null;
+  const offset = (t - new Date(`${weekStarts[i]}T00:00:00Z`).getTime()) / (7 * DAY_MS);
+  return i + offset - 0.5;
+}
+
+/**
+ * Builds everything the digest and the page show for a given week.
+ *
+ * @param {object} params
+ * @param {object} params.index contents of data/<queue>/index.json
+ * @param {object[]} params.snapshots weekly snapshots (data/<queue>/weeks/*.json)
+ * @param {string} [params.weekStart] target week (default: the latest collected)
+ * @param {Partial<typeof defaults>} [params.options]
+ */
+export function buildReport({ index, snapshots, weekStart, options = {} }) {
+  const opts = { ...defaults, ...options };
+  const byStart = new Map(snapshots.map((s) => [s.week.startDate, s]));
+  const starts = [...byStart.keys()].sort();
+  if (!starts.length) throw new Error(`No week collected for ${index.queue}`);
+
+  const targetIdx = weekStart ? starts.indexOf(weekStart) : starts.length - 1;
+  if (targetIdx < 0) throw new Error(`Week ${weekStart} is not in the data`);
+  const target = byStart.get(starts[targetIdx]);
+  const previous = targetIdx > 0 ? byStart.get(starts[targetIdx - 1]) : null;
+
+  const statsByWeek = new Map();
+  const statsOf = (start) => {
+    if (!statsByWeek.has(start)) {
+      const stats = deckStats(aggregate([byStart.get(start)]));
+      statsByWeek.set(start, new Map(stats.map((d) => [d.key, d])));
+    }
+    return statsByWeek.get(start);
+  };
+
+  const trendStarts = starts.slice(Math.max(0, targetIdx - opts.trendWeeks + 1), targetIdx + 1);
+  const previousStats = previous ? statsOf(previous.week.startDate) : new Map();
+
+  const decks = [...statsOf(target.week.startDate).values()]
+    .filter((deck) => deck.playRate >= opts.minPlayRate)
+    .map((deck) => {
+      const prev = previousStats.get(deck.key);
+      return {
+        ...deck,
+        deltaPlayRate: prev ? deck.playRate - prev.playRate : null,
+        history: trendStarts.map((start) => {
+          const s = statsOf(start).get(deck.key);
+          return {
+            startDate: start,
+            // Missing that week: nobody played it (or too few games to be published).
+            playRate: s?.playRate ?? 0,
+            winRate: s?.winRate ?? null,
+            ci: s?.ci ?? null,
+            games: s?.games ?? 0,
+          };
+        }),
+      };
+    });
+
+  const eras = [...(index.eras ?? [])].sort((a, b) => a.startedAt.localeCompare(b.startedAt));
+  const era = eraAt(eras, target.week.endDate);
+  const eraMarkers = eras
+    .filter((e) => e.startedAt.slice(0, 10) > trendStarts[0])
+    .filter((e) => e.startedAt.slice(0, 10) <= target.week.endDate)
+    .map((e) => ({
+      key: e.key,
+      name: e.name,
+      position: weekAxisPosition(trendStarts, e.startedAt),
+    }))
+    .filter((e) => e.position != null);
+
+  // Matchups: several weeks summed, never reaching back before the current set's release.
+  const eraStart = era?.startedAt.slice(0, 10);
+  let matchupStarts = starts
+    .slice(Math.max(0, targetIdx - opts.matchupWeeks + 1), targetIdx + 1)
+    .filter((start) => !eraStart || start >= eraStart);
+  if (!matchupStarts.length) matchupStarts = [target.week.startDate];
+  const matchupSnapshots = matchupStarts.map((start) => byStart.get(start));
+  const matchupAgg = aggregate(matchupSnapshots);
+  const matchupDecks = decks.slice(0, opts.matchupDecks);
+  const cells = matchupDecks.flatMap((row) =>
+    matchupDecks.map((col) => {
+      const m = matchupFor(matchupAgg, row.key, col.key);
+      return {
+        row: row.key,
+        col: col.key,
+        mirror: row.key === col.key,
+        games: m?.games ?? 0,
+        winRate: m ? rate(m) : null,
+        onPlay: m ? { games: m.onPlay.games, winRate: rate(m.onPlay) } : null,
+        onDraw: m ? { games: m.onDraw.games, winRate: rate(m.onDraw) } : null,
+      };
+    }),
+  );
+
+  const withPrev = decks.filter((d) => d.deltaPlayRate != null);
+  const summary = {
+    topDeck: decks[0] ?? null,
+    risers: withPrev
+      .filter((d) => d.deltaPlayRate >= opts.moverThreshold)
+      .sort((a, b) => b.deltaPlayRate - a.deltaPlayRate)
+      .slice(0, 3),
+    fallers: withPrev
+      .filter((d) => d.deltaPlayRate <= -opts.moverThreshold)
+      .sort((a, b) => a.deltaPlayRate - b.deltaPlayRate)
+      .slice(0, 3),
+    // Conservative ranking on the interval's lower bound, so a small lucky sample doesn't win.
+    bestWinRate: [...decks].sort((a, b) => b.ci[0] - a.ci[0])[0] ?? null,
+  };
+
+  const sumGames = (list) => list.reduce((total, s) => total + s.totalGames, 0);
+
+  return {
+    queue: index.queue,
+    queueName: index.queueName ?? index.queue,
+    options: opts,
+    era: era ? { key: era.key, name: era.name } : null,
+    week: { ...target.week, totalGames: target.totalGames, updatedAt: target.updatedAt },
+    previousWeek: previous ? { ...previous.week, totalGames: previous.totalGames } : null,
+    decks,
+    trend: {
+      weeks: trendStarts,
+      endDate: target.week.endDate,
+      totalGames: sumGames(trendStarts.map((start) => byStart.get(start))),
+      eraMarkers,
+    },
+    matchups: {
+      weeks: matchupStarts,
+      endDate: target.week.endDate,
+      totalGames: matchupAgg.totalGames,
+      updatedAt: matchupAgg.updatedAt,
+      decks: matchupDecks,
+      cells,
+    },
+    summary,
+  };
+}
