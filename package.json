@@ -10,6 +10,7 @@
   "scripts": {
     "collect": "node scripts/collect.js",
     "digest": "node scripts/digest.js",
+    "post:discord": "node --env-file-if-exists=.env scripts/post-discord.js",
     "check:api": "node scripts/check-api.js",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
