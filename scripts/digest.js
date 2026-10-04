@@ -12,7 +12,7 @@ import { metaTableChart } from '../src/charts/meta-table.js';
 import { themes } from '../src/charts/theme.js';
 import { trendsChart } from '../src/charts/trends.js';
 import { config } from '../src/config.js';
-import { buildDigestMessage } from '../src/lib/digest-message.js';
+import { buildDigestCard } from '../src/lib/digest-message.js';
 import { buildReport, countsMatches } from '../src/lib/metrics.js';
 import { lastFinishedWeekEnd, pickFeaturedQueue } from '../src/lib/queues.js';
 import { createDocument, svgToPng } from '../src/lib/render-png.js';
@@ -59,11 +59,8 @@ async function renderDigest(report, dir) {
   const digest = {
     queue: report.queue,
     week: report.week,
-    content: buildDigestMessage(report),
-    images: images.map(({ file, svg }) => ({
-      file,
-      title: svg.querySelector('title').textContent,
-    })),
+    card: buildDigestCard(report),
+    images: images.map(({ file }) => ({ file })),
   };
   await writeFile(path.join(dir, 'digest.json'), `${JSON.stringify(digest, null, 2)}\n`);
   return digest;
@@ -97,7 +94,8 @@ for (const format of FORMATS) {
 
   const dir = path.join(OUT_DIR, format);
   const digest = await renderDigest(report, dir);
-  console.log(`${digest.content}\n\n→ ${path.relative(process.cwd(), dir)}/\n`);
+  const { title, description } = digest.card;
+  console.log(`${title}\n${description}\n→ ${path.relative(process.cwd(), dir)}/\n`);
   summary.rendered.push({ format, queue: report.queue, week: report.week.startDate });
 }
 

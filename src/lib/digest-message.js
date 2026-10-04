@@ -1,40 +1,43 @@
 /**
- * Text of the Discord message posted with the Monday charts (in French, for the team).
+ * Content of the Discord card posted with the Monday charts (in French, for the team).
+ * Kept short on purpose: the charts carry the detail (intervals, counts, matchups).
  */
-import { SOURCE_URL } from '../config.js';
 import { formatCount, formatDelta, formatPct, formatUpdatedAt, formatWeekRange } from './format.js';
 import { deckName } from './inks.js';
 
-export function buildDigestMessage(report) {
+/** Rising / falling decks listed in the card, per direction. */
+const MOVERS = 2;
+
+export function buildDigestCard(report) {
   const { week, previousWeek, summary, unit } = report;
-  const lines = [`## Méta ${report.queueName} · ${formatWeekRange(week.startDate, week.endDate)}`];
+  const { topDeck, risers, fallers, bestWinRate } = summary;
 
   let volume = formatCount(week.sampleSize, unit);
   if (previousWeek?.sampleSize) {
     const change = (100 * (week.sampleSize - previousWeek.sampleSize)) / previousWeek.sampleSize;
-    volume += ` (${formatDelta(change)} % vs semaine précédente)`;
-  }
-  lines.push(volume, '');
-
-  const { topDeck, risers, fallers, bestWinRate } = summary;
-  if (topDeck) {
-    lines.push(`**Le plus joué** : ${deckName(topDeck.colors)} — ${formatPct(topDeck.playRate)}`);
+    volume += ` (${formatDelta(change)} % vs S−1)`;
   }
   const movers = (decks) =>
-    decks.map((d) => `${deckName(d.colors)} (${formatDelta(d.deltaPlayRate)} pt)`).join(', ');
-  if (risers.length) lines.push(`**En hausse** : ${movers(risers)}`);
-  if (fallers.length) lines.push(`**En baisse** : ${movers(fallers)}`);
+    decks
+      .slice(0, MOVERS)
+      .map((d) => `${deckName(d.colors)} ${formatDelta(d.deltaPlayRate)} pt`)
+      .join(' · ');
+
+  const lines = [volume];
+  if (topDeck) {
+    lines.push(`Le plus joué : **${deckName(topDeck.colors)}** ${formatPct(topDeck.playRate)}`);
+  }
+  if (risers.length) lines.push(`En hausse : ${movers(risers)}`);
+  if (fallers.length) lines.push(`En baisse : ${movers(fallers)}`);
   if (bestWinRate) {
     lines.push(
-      `**Meilleur win rate** : ${deckName(bestWinRate.colors)} — ${formatPct(
-        bestWinRate.winRate,
-      )} (IC 95 % ${formatPct(bestWinRate.ci[0])}–${formatPct(bestWinRate.ci[1])}, ${formatCount(
-        bestWinRate.games,
-        unit,
-      )})`,
+      `Meilleur win rate : **${deckName(bestWinRate.colors)}** ${formatPct(bestWinRate.winRate)}`,
     );
   }
 
-  lines.push('', `-# Source : <${SOURCE_URL}> · données du ${formatUpdatedAt(week.updatedAt)}`);
-  return lines.join('\n');
+  return {
+    title: `${report.queueName} · ${formatWeekRange(week.startDate, week.endDate)}`,
+    description: lines.join('\n'),
+    footer: `Données duels.ink du ${formatUpdatedAt(week.updatedAt)}`,
+  };
 }

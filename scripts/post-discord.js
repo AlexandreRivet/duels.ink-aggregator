@@ -9,6 +9,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { setTimeout as sleep } from 'node:timers/promises';
+import { SOURCE_URL } from '../src/config.js';
 
 const OUT_DIR = fileURLToPath(new URL('../out/digest/', import.meta.url));
 // The charts' accent blue, as an integer for the embeds' side bar.
@@ -31,21 +32,33 @@ if (!digests.length) {
   process.exit(0);
 }
 
+/** The published page, opened on the digest's queue (null when Pages is off). */
+function pageLink(digest) {
+  if (!process.env.SITE_URL) return null;
+  const link = new URL(process.env.SITE_URL);
+  link.searchParams.set('queue', digest.queue);
+  return link.href;
+}
+
 function payloadFor(digest) {
-  let content = digest.content;
-  if (process.env.SITE_URL) {
-    const link = new URL(process.env.SITE_URL);
-    link.searchParams.set('queue', digest.queue);
-    content += `\n-# Graphes interactifs : <${link}>`;
-  }
+  const page = pageLink(digest);
+  const { title, description, footer } = digest.card;
+  // Embeds sharing the same url are shown by Discord as a single card with a 2×2 image grid.
+  const url = page ?? SOURCE_URL;
+  const [first, ...others] = digest.images;
   return {
-    content,
-    // One embed per image, each with its title; no accidental mentions.
-    embeds: digest.images.map((image) => ({
-      title: image.title,
-      color: EMBED_COLOR,
-      image: { url: `attachment://${image.file}` },
-    })),
+    embeds: [
+      {
+        author: { name: 'Source : duels.ink', url: SOURCE_URL },
+        title,
+        url,
+        description: page ? `${description}\n[Graphes interactifs](${page})` : description,
+        color: EMBED_COLOR,
+        image: { url: `attachment://${first.file}` },
+        footer: { text: footer },
+      },
+      ...others.map((image) => ({ url, image: { url: `attachment://${image.file}` } })),
+    ],
     attachments: digest.images.map((image, id) => ({ id, filename: image.file })),
     allowed_mentions: { parse: [] },
   };

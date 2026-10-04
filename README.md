@@ -21,7 +21,7 @@ GitHub Actions, Monday 05:17 UTC
   npm run collect    → data/<queue>/weeks/<start>.json   (committed automatically)
   npm run digest     → out/digest/{bo1,bo3}/*.png + digest.json
   npm run build      → dist/  → GitHub Pages
-  post-discord.js    → one message per format (BO1, then BO3), 4 images each
+  post-discord.js    → one compact card per format (BO1, then BO3), charts in a 2×2 grid
 ```
 
 The charts are written once (`src/charts/`): the page renders them in the browser, the digest
