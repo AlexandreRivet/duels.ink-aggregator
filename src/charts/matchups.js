@@ -5,22 +5,22 @@
  */
 import { interpolateLab, piecewise, rgb, scaleDiverging } from 'd3';
 import { formatCount, formatDay, formatPct, formatWeekRange } from '../lib/format.js';
-import { deckName, inkName } from '../lib/inks.js';
+import { deckName } from '../lib/inks.js';
 import {
+  DECK_LABEL_WIDTH,
   PAD,
   createSvg,
   deckLabel,
   finalize,
   footer,
   header,
-  inkChips,
   middle,
   textWidth,
 } from './common.js';
 
-const LABEL_WIDTH = 196;
-const CELL_HEIGHT = 38;
-const COLUMN_HEADER = 56;
+const LABEL_WIDTH = 40;
+const CELL_HEIGHT = 40;
+const COLUMN_HEADER = 30;
 
 /** Largest distance from 50% shown by the colour (beyond it, the colour saturates). */
 export const MATCHUP_SPREAD = 10;
@@ -68,21 +68,10 @@ export function matchupsChart(report, { document, theme, width = 800 }) {
   const cellWidth = Math.floor((width - PAD - gridLeft) / decks.length);
   const gridTop = top + COLUMN_HEADER;
 
-  // Column headers: ink chips + ink names on two lines
+  // Column headers: the opponent's ink chips
   decks.forEach((deck, j) => {
     const cx = gridLeft + j * cellWidth + cellWidth / 2;
-    const chipsWidth = deck.colors.length * 10 - (deck.colors.length - 1);
-    inkChips(svg, deck.colors, { x: cx - chipsWidth / 2, y: top + 8, theme });
-    deck.colors.forEach((ink, k) => {
-      svg
-        .append('text')
-        .attr('x', cx)
-        .attr('y', top + 28 + k * 13)
-        .attr('font-size', 10)
-        .attr('fill', theme.text2)
-        .attr('text-anchor', 'middle')
-        .text(inkName(ink));
-    });
+    deckLabel(svg, deck, { x: cx - DECK_LABEL_WIDTH / 2, y: top + 10, theme });
   });
 
   const byKey = new Map(cells.map((c) => [`${c.row}|${c.col}`, c]));
