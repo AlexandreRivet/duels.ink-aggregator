@@ -19,6 +19,25 @@ export function wilson(wins, n, z = 1.96) {
   return [100 * (center - half), 100 * (center + half)];
 }
 
+/**
+ * 95% interval (Wald) of the difference between two proportions x1/n1 and x2/n2, in points.
+ * `z` can be raised to be stricter, e.g. when many differences are tested at once.
+ */
+export function differenceCI(x1, n1, x2, n2, z = 1.96) {
+  if (!n1 || !n2) return [NaN, NaN];
+  const p1 = x1 / n1;
+  const p2 = x2 / n2;
+  const half = z * Math.sqrt((p1 * (1 - p1)) / n1 + (p2 * (1 - p2)) / n2);
+  return [100 * (p1 - p2 - half), 100 * (p1 - p2 + half)];
+}
+
+/** Direction of a change whose interval excludes 0, or 'flat' when it is within the noise. */
+export function changeSignal(ci) {
+  if (ci[0] > 0) return 'up';
+  if (ci[1] < 0) return 'down';
+  return 'flat';
+}
+
 /** Where the win rate sits relative to 50%, accounting for uncertainty. */
 export function winRateSignal(ci) {
   if (ci[0] > 50) return 'above';
@@ -171,6 +190,50 @@ export function firstPlayerWinRate(agg) {
   return games ? (100 * wins) / games : null;
 }
 
+/**
+ * A deck's change since the previous week: last week's figures, the changes in points with
+ * their 95% interval, and whether each change stands out from the noise.
+ */
+function weekOverWeek(deck, prev, seats, previousSeats) {
+  if (!prev) {
+    return { previous: null, deltaWinRate: null, playRateChange: null, winRateChange: null };
+  }
+  const playRateCI = differenceCI(deck.games, seats, prev.games, previousSeats);
+  const winRateCI = differenceCI(deck.wins, deck.games, prev.wins, prev.games);
+  return {
+    previous: { playRate: prev.playRate, winRate: prev.winRate, ci: prev.ci, games: prev.games },
+    deltaWinRate: deck.winRate - prev.winRate,
+    playRateChange: { ci: playRateCI, signal: changeSignal(playRateCI) },
+    winRateChange: { ci: winRateCI, signal: changeSignal(winRateCI) },
+  };
+}
+
+/** Minimum games this week for a matchup to be compared with the weeks before. */
+const MIN_WEEK_GAMES = 30;
+/** Matchups need a clear move: ~100 cells are tested each week, so ~99.7% and ≥ 5 points. */
+const MATCHUP_TREND_Z = 3;
+const MATCHUP_TREND_MIN_POINTS = 5;
+
+/**
+ * Whether a matchup did clearly better (up) or worse (down) this week than over the earlier
+ * weeks of the window, with both figures.
+ */
+function matchupTrend(weekAgg, priorAgg, row, col, minGames) {
+  const none = { trend: null, thisWeek: null, before: null };
+  if (!priorAgg || row === col) return none;
+  const now = matchupFor(weekAgg, row, col);
+  const before = matchupFor(priorAgg, row, col);
+  if (!now || !before || now.games < MIN_WEEK_GAMES || before.games < minGames) return none;
+  const ci = differenceCI(now.wins, now.games, before.wins, before.games, MATCHUP_TREND_Z);
+  const delta = rate(now) - rate(before);
+  const signal = changeSignal(ci);
+  return {
+    trend: signal !== 'flat' && Math.abs(delta) >= MATCHUP_TREND_MIN_POINTS ? signal : null,
+    thisWeek: { games: now.games, winRate: rate(now) },
+    before: { games: before.games, winRate: rate(before) },
+  };
+}
+
 /** Era (card set) in force at the end of a week. */
 function eraAt(eras, isoDay) {
   return eras.filter((era) => era.startedAt.slice(0, 10) <= isoDay).at(-1) ?? null;
@@ -218,6 +281,9 @@ export function buildReport({ index, snapshots, weekStart, options = {} }) {
 
   const trendStarts = starts.slice(Math.max(0, targetIdx - opts.trendWeeks + 1), targetIdx + 1);
   const previousStats = previous ? statsOf(previous.week.startDate) : new Map();
+  const seatsOf = (stats) => [...stats.values()].reduce((total, d) => total + d.games, 0);
+  const seats = seatsOf(statsOf(target.week.startDate));
+  const previousSeats = seatsOf(previousStats);
 
   const decks = [...statsOf(target.week.startDate).values()]
     .filter((deck) => deck.playRate >= opts.minPlayRate)
@@ -226,6 +292,7 @@ export function buildReport({ index, snapshots, weekStart, options = {} }) {
       return {
         ...deck,
         deltaPlayRate: prev ? deck.playRate - prev.playRate : null,
+        ...weekOverWeek(deck, prev, seats, previousSeats),
         history: trendStarts.map((start) => {
           const s = statsOf(start).get(deck.key);
           return {
@@ -260,6 +327,10 @@ export function buildReport({ index, snapshots, weekStart, options = {} }) {
   if (!matchupStarts.length) matchupStarts = [target.week.startDate];
   const matchupSnapshots = matchupStarts.map((start) => byStart.get(start));
   const matchupAgg = aggregate(matchupSnapshots);
+  // This week alone against the window's earlier weeks: two independent samples.
+  const weekAgg = aggregate([target]);
+  const priorSnapshots = matchupSnapshots.filter((snapshot) => snapshot !== target);
+  const priorAgg = priorSnapshots.length ? aggregate(priorSnapshots) : null;
   const matchupDecks = decks.slice(0, opts.matchupDecks);
   // Every pair of shown decks: the matrix uses the top ones, the deck sheet all of them.
   const cells = decks.flatMap((row) =>
@@ -273,6 +344,7 @@ export function buildReport({ index, snapshots, weekStart, options = {} }) {
         winRate: m ? rate(m) : null,
         onPlay: m ? { games: m.onPlay.games, winRate: rate(m.onPlay) } : null,
         onDraw: m ? { games: m.onDraw.games, winRate: rate(m.onDraw) } : null,
+        ...matchupTrend(weekAgg, priorAgg, row.key, col.key, opts.minMatchupGames),
       };
     }),
   );
