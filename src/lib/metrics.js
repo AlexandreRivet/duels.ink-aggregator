@@ -261,8 +261,9 @@ export function buildReport({ index, snapshots, weekStart, options = {} }) {
   const matchupSnapshots = matchupStarts.map((start) => byStart.get(start));
   const matchupAgg = aggregate(matchupSnapshots);
   const matchupDecks = decks.slice(0, opts.matchupDecks);
-  const cells = matchupDecks.flatMap((row) =>
-    matchupDecks.map((col) => {
+  // Every pair of shown decks: the matrix uses the top ones, the deck sheet all of them.
+  const cells = decks.flatMap((row) =>
+    decks.map((col) => {
       const m = matchupFor(matchupAgg, row.key, col.key);
       return {
         row: row.key,

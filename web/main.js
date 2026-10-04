@@ -1,3 +1,4 @@
+import { deckSheetChart } from '../src/charts/deck-sheet.js';
 import { matchupsChart } from '../src/charts/matchups.js';
 import { metaMapChart } from '../src/charts/meta-map.js';
 import { metaTableChart } from '../src/charts/meta-table.js';
@@ -15,7 +16,7 @@ import {
   formatWeekRange,
 } from '../src/lib/format.js';
 import { INKS, deckName } from '../src/lib/inks.js';
-import { buildReport, countsMatches, sampleSize } from '../src/lib/metrics.js';
+import { buildReport, countsMatches, sampleSize, wilson } from '../src/lib/metrics.js';
 import { pickFeaturedQueue } from '../src/lib/queues.js';
 
 const BASE = import.meta.env.BASE_URL;
@@ -78,6 +79,8 @@ function readUrlState() {
     queue: params.get('queue'),
     week: params.get('semaine'),
     matchupWeeks: Number(params.get('matchups')) || config.matchupWeeks,
+    // Deck shown in the deck sheet (null: the most played one).
+    deck: params.get('deck'),
   };
 }
 
@@ -86,6 +89,7 @@ function writeUrlState() {
   if (state.queue !== featuredQueue) params.set('queue', state.queue);
   if (state.week) params.set('semaine', state.week);
   if (state.matchupWeeks !== config.matchupWeeks) params.set('matchups', state.matchupWeeks);
+  if (state.deck) params.set('deck', state.deck);
   const query = params.toString();
   history.replaceState(null, '', query ? `?${query}` : location.pathname);
 }
@@ -273,6 +277,45 @@ function playDrawTableView(report) {
   );
 }
 
+function deckSheetTableView(report, key) {
+  const byKey = new Map(report.matchups.cells.map((c) => [`${c.row}|${c.col}`, c]));
+  return table(
+    [
+      'Contre',
+      'Fréq.',
+      'Win rate',
+      'IC 95 %',
+      'En commençant',
+      'En second',
+      capitalize(report.unit.many),
+    ],
+    report.decks.map((opponent) => {
+      const cell = byKey.get(`${key}|${opponent.key}`);
+      if (cell.mirror || cell.winRate == null) {
+        return [
+          deckName(opponent.colors),
+          formatPct(opponent.playRate),
+          cell.mirror ? 'miroir' : '—',
+          '—',
+          '—',
+          '—',
+          formatInt(cell.games),
+        ];
+      }
+      const ci = wilson((cell.winRate * cell.games) / 100, cell.games);
+      return [
+        deckName(opponent.colors),
+        formatPct(opponent.playRate),
+        formatPct(cell.winRate),
+        `${formatPct(ci[0])} – ${formatPct(ci[1])}`,
+        formatPct(cell.onPlay?.winRate),
+        formatPct(cell.onDraw?.winRate),
+        formatInt(cell.games),
+      ];
+    }),
+  );
+}
+
 // --- Charts ---
 
 const openedTables = () =>
@@ -288,6 +331,33 @@ function card({ id, svg, table: tableNode, controls }, opened) {
   details.append(el('summary', {}, 'Voir les données en tableau'), scroll);
   figure.append(svg, details);
   return figure;
+}
+
+/** The deck sheet card, with its deck picker; changing the deck redraws only this card. */
+function deckSheetCard(report, theme, opened) {
+  const { decks } = report;
+  const key = decks.some((d) => d.key === state.deck) ? state.deck : decks[0].key;
+  const select = el('select', { 'aria-label': 'Deck de la fiche' });
+  select.replaceChildren(...decks.map((d) => el('option', { value: d.key }, deckName(d.colors))));
+  select.value = key;
+  select.addEventListener('change', () => {
+    state.deck = select.value === decks[0].key ? null : select.value;
+    writeUrlState();
+    const fresh = deckSheetCard(report, theme, openedTables());
+    $('fiche').replaceWith(fresh);
+    fresh.querySelector('select').focus();
+  });
+  const controls = el('label', { class: 'card-control' });
+  controls.append(el('span', {}, 'Deck'), select);
+  return card(
+    {
+      id: 'fiche',
+      svg: deckSheetChart(report, key, { document, theme }),
+      table: deckSheetTableView(report, key),
+      controls,
+    },
+    opened,
+  );
 }
 
 function renderCharts(report) {
@@ -321,7 +391,10 @@ function renderCharts(report) {
     },
   ];
 
-  container.replaceChildren(...charts.map((chart) => card(chart, opened)));
+  const cards = charts.map((chart) => card(chart, opened));
+  // The deck sheet sits next to the matchup matrix.
+  cards.splice(4, 0, deckSheetCard(report, theme, opened));
+  container.replaceChildren(...cards);
 }
 
 function showError(error) {

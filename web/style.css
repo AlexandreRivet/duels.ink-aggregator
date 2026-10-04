@@ -102,13 +102,22 @@ a {
   color: var(--text-2);
 }
 
-.field select {
+.field select,
+.card-control select {
   font: inherit;
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 6px 10px;
+}
+
+.card-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 24px 0;
+  color: var(--text-2);
 }
 
 .kpis {
