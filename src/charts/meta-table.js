@@ -59,13 +59,13 @@ export function metaTableChart(report, { document, theme, width = 800 }) {
 
   const col = {
     deck: PAD,
-    bar: 220,
-    barMax: 110,
-    deltaPlay: 424,
-    dotsFrom: 446,
-    dotsTo: 580,
-    winRate: 642,
-    deltaWin: 700,
+    bar: 66,
+    barMax: 190,
+    deltaPlay: 346,
+    dotsFrom: 374,
+    dotsTo: 590,
+    winRate: 664,
+    deltaWin: 722,
     games: width - PAD,
   };
 
