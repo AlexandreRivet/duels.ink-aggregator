@@ -1,5 +1,6 @@
 // Posts the digest rendered by `npm run digest` to a Discord channel through a webhook.
-// Env: DISCORD_WEBHOOK_URL (required), SITE_URL (link to the page, optional).
+// Env: DISCORD_WEBHOOK_URL (required). In CI, the workflow also sets SITE_URL to the
+// GitHub Pages address so the message links to the page; it's empty when Pages is off.
 // Usage: npm run post:discord [-- --dry-run]
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
