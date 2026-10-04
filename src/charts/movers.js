@@ -18,6 +18,7 @@ import {
   hitArea,
   legendDot,
   middle,
+  textWidth,
 } from './common.js';
 
 const ROW_HEIGHT = 28;
@@ -65,14 +66,14 @@ export function moversChart(report, { document, theme, width = 800 }) {
   const panels = [
     {
       label: 'POPULARITÉ (Δ PTS)',
-      from: 226,
-      to: 470,
+      from: 70,
+      to: 400,
       value: (d) => d.deltaPlayRate,
       change: (d) => d.playRateChange,
     },
     {
       label: 'WIN RATE (Δ PTS)',
-      from: 520,
+      from: 446,
       to: width - PAD,
       value: (d) => d.deltaWinRate,
       change: (d) => d.winRateChange,
@@ -195,17 +196,29 @@ export function moversChart(report, { document, theme, width = 800 }) {
     lx += legendDot(svg, { x: lx, y: ly, color: signalColor[signal], label, theme }) + 20;
   }
 
-  const notes = ['Couleur quand l’intervalle à 95 % de l’écart exclut 0 · trait : cet intervalle'];
+  // Decks without a previous week, as chips
+  let footerTop = ly + 30;
   if (newcomers.length) {
-    notes.push(`Nouveaux cette semaine : ${newcomers.map((d) => deckName(d.colors)).join(', ')}`);
+    const ny = ly + 28;
+    const lead = 'Nouveaux cette semaine :';
+    svg
+      .append('text')
+      .attr('x', PAD)
+      .attr('y', ny + middle(12))
+      .attr('font-size', 12)
+      .attr('fill', theme.text2)
+      .text(lead);
+    let nx = PAD + textWidth(lead, 12) + 10;
+    for (const deck of newcomers) nx += deckLabel(svg, deck, { x: nx, y: ny, theme }) + 10;
+    footerTop += 24;
   }
   const height = footer(svg, {
-    y: ly + 30,
+    y: footerTop,
     theme,
     updatedAt: week.updatedAt,
     sampleSize: week.sampleSize,
     unit,
-    note: notes.join(' · '),
+    note: 'Couleur quand l’intervalle à 95 % de l’écart exclut 0 · trait : cet intervalle',
   });
   return finalize(svg, height);
 }
