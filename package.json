@@ -8,6 +8,7 @@
     "node": ">=22"
   },
   "scripts": {
+    "collect": "node scripts/collect.js",
     "check:api": "node scripts/check-api.js",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
