@@ -27,15 +27,18 @@ GitHub Actions, Monday 08:00 UTC (10:00 / 9:00 in Paris)
 The charts are written once (`src/charts/`): the page renders them in the browser, the digest
 renders them in Node (jsdom + resvg, bundled Inter font), with no headless browser.
 
-| Chart                        | What it shows                                                                           | Discord |
-| ---------------------------- | --------------------------------------------------------------------------------------- | ------- |
-| Méta de la semaine           | Play rate, change vs the previous week, win rate with its 95% confidence interval       | ✓       |
-| Carte du méta                | Play rate × win rate: popular and strong decks top right, rare but strong ones top left | ✓       |
-| Popularité — 12 semaines     | One small chart per deck (9 most played), same scale, set releases marked               | ✓       |
-| Matchups — 4 semaines        | Win rate of the row deck against the column deck, cells under 100 games greyed          | ✓       |
-| Fiche deck                   | One deck (picked on the page) against every other deck, most frequent opponents first   |         |
-| Commencer ou jouer en second | Each deck's win rate going first and going second, and the gap                          |         |
-| Win rate — 12 semaines       | Same grid as play rate, with the uncertainty band and a 50% reference line              |         |
+Discord gets the charts that compare the week with the previous one (S−1):
+
+| Chart                        | What it shows                                                                         | Discord |
+| ---------------------------- | ------------------------------------------------------------------------------------- | ------- |
+| Méta de la semaine           | Play rate and win rate (95% interval), with last week's values and the changes (Δ)    | ✓       |
+| Carte du méta                | Play rate × win rate, with an arrow from where each deck stood last week              | ✓       |
+| Mouvements de la semaine     | Change in play rate and in win rate per deck, coloured only when it beats the noise   | ✓       |
+| Matchups — 4 semaines        | Win rate of the row deck against the column deck; ▲▼ when this week clearly differs   | ✓       |
+| Popularité — 12 semaines     | One small chart per deck (9 most played), same scale, set releases marked             |         |
+| Fiche deck                   | One deck (picked on the page) against every other deck, most frequent opponents first |         |
+| Commencer ou jouer en second | Each deck's win rate going first and going second, and the gap                        |         |
+| Win rate — 12 semaines       | Same grid as play rate, with the uncertainty band and a 50% reference line            |         |
 
 Settings (collected queues, number of weeks, thresholds) live in [src/config.js](src/config.js).
 
@@ -101,6 +104,9 @@ webhook from `.env` (see `.env.example`); `-- --dry-run` prints the messages wit
   collector fetches a week again if its game count in `availableWeeks` changes.
 - A single week is too thin for matchups (many cells under 100 games): the matrix sums 4
   weeks, never reaching back before the current set's release.
+- A change is shown as real only when its 95% interval excludes 0 (grey otherwise). Matchup
+  flags compare this week alone with the window's earlier weeks (independent samples) and need a
+  ≥ 5-point gap at ~99.7%, since about a hundred cells are tested each week.
 - "Meilleur win rate" (best win rate) is ranked on the lower bound of the confidence interval,
   so a rarely played deck that got lucky doesn't come out on top.
 
