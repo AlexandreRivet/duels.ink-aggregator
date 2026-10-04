@@ -25,6 +25,9 @@ GitHub Actions, Monday 08:00 UTC (10:00 / 9:00 in Paris)
   post-discord.js    → one compact card per format (BO1, then BO3), charts in a 2×2 grid
 ```
 
+Every push to `main` (a merged pull request included) also rebuilds and redeploys the page
+([pages.yml](.github/workflows/pages.yml)); the two workflows never deploy at the same time.
+
 The charts are written once (`src/charts/`): the page renders them in the browser, the digest
 renders them in Node (jsdom + resvg, bundled Inter font), with no headless browser.
 

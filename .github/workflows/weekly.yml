@@ -63,6 +63,10 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    # Shared with the push-triggered deployment (pages.yml): one at a time.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     permissions:
       pages: write
       id-token: write
