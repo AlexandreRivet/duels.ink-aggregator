@@ -1,8 +1,10 @@
-// Posts the digest rendered by `npm run digest` to a Discord channel through a webhook.
+// Posts the digests rendered by `npm run digest` to a Discord channel through a webhook:
+// one message per format, BO1 first.
 // Env: DISCORD_WEBHOOK_URL (required). In CI, the workflow also sets SITE_URL to the
-// GitHub Pages address so the message links to the page; it's empty when Pages is off.
+// GitHub Pages address so each message links to the page on its queue; it's empty when Pages
+// is off.
 // Usage: npm run post:discord [-- --dry-run]
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
@@ -14,36 +16,60 @@ const EMBED_COLOR = 0x3987e5;
 
 const { values: args } = parseArgs({ options: { 'dry-run': { type: 'boolean', default: false } } });
 
-const digest = JSON.parse(await readFile(path.join(OUT_DIR, 'digest.json'), 'utf8'));
+// out/digest/bo1/, out/digest/bo3/: alphabetical order is the posting order.
+const entries = await readdir(OUT_DIR, { withFileTypes: true }).catch(() => []);
+const digests = [];
+for (const entry of entries
+  .filter((e) => e.isDirectory())
+  .sort((a, b) => a.name.localeCompare(b.name))) {
+  const dir = path.join(OUT_DIR, entry.name);
+  const digest = JSON.parse(await readFile(path.join(dir, 'digest.json'), 'utf8'));
+  digests.push({ dir, digest });
+}
+if (!digests.length) {
+  console.log('No digest to post.');
+  process.exit(0);
+}
 
-let content = digest.content;
-if (process.env.SITE_URL) content += `\n-# Graphes interactifs : <${process.env.SITE_URL}>`;
-
-const payload = {
-  content,
-  // One embed per image, each with its title; no accidental mentions.
-  embeds: digest.images.map((image) => ({
-    title: image.title,
-    color: EMBED_COLOR,
-    image: { url: `attachment://${image.file}` },
-  })),
-  attachments: digest.images.map((image, id) => ({ id, filename: image.file })),
-  allowed_mentions: { parse: [] },
-};
+function payloadFor(digest) {
+  let content = digest.content;
+  if (process.env.SITE_URL) {
+    const link = new URL(process.env.SITE_URL);
+    link.searchParams.set('queue', digest.queue);
+    content += `\n-# Graphes interactifs : <${link}>`;
+  }
+  return {
+    content,
+    // One embed per image, each with its title; no accidental mentions.
+    embeds: digest.images.map((image) => ({
+      title: image.title,
+      color: EMBED_COLOR,
+      image: { url: `attachment://${image.file}` },
+    })),
+    attachments: digest.images.map((image, id) => ({ id, filename: image.file })),
+    allowed_mentions: { parse: [] },
+  };
+}
 
 if (args['dry-run']) {
-  console.log(JSON.stringify(payload, null, 2));
+  console.log(
+    JSON.stringify(
+      digests.map(({ digest }) => payloadFor(digest)),
+      null,
+      2,
+    ),
+  );
   process.exit(0);
 }
 
 const webhook = process.env.DISCORD_WEBHOOK_URL;
 if (!webhook) throw new Error('DISCORD_WEBHOOK_URL is missing (see .env.example)');
 
-async function post() {
+async function post(dir, digest) {
   const form = new FormData();
-  form.append('payload_json', JSON.stringify(payload));
+  form.append('payload_json', JSON.stringify(payloadFor(digest)));
   for (const [id, image] of digest.images.entries()) {
-    const bytes = await readFile(path.join(OUT_DIR, image.file));
+    const bytes = await readFile(path.join(dir, image.file));
     form.append(`files[${id}]`, new Blob([bytes], { type: 'image/png' }), image.file);
   }
   const url = new URL(webhook);
@@ -51,16 +77,17 @@ async function post() {
   return fetch(url, { method: 'POST', body: form });
 }
 
-let res = await post();
-if (res.status === 429) {
-  const { retry_after: retryAfter = 5 } = await res.json();
-  await sleep(retryAfter * 1000);
-  res = await post();
+for (const [i, { dir, digest }] of digests.entries()) {
+  // A short pause keeps the messages in order and clear of Discord's rate limit.
+  if (i > 0) await sleep(1000);
+  let res = await post(dir, digest);
+  if (res.status === 429) {
+    const { retry_after: retryAfter = 5 } = await res.json();
+    await sleep(retryAfter * 1000);
+    res = await post(dir, digest);
+  }
+  if (!res.ok) {
+    throw new Error(`Discord answered ${res.status} for ${digest.queue}: ${await res.text()}`);
+  }
+  console.log(`Posted the ${digest.queue} digest for the week of ${digest.week.startDate}.`);
 }
-if (!res.ok) {
-  throw new Error(`Discord answered ${res.status}: ${await res.text()}`);
-}
-
-console.log(
-  `Posted the ${digest.queue} digest for the week of ${digest.week.startDate} to Discord.`,
-);

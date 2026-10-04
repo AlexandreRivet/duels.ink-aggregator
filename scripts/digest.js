@@ -1,5 +1,7 @@
-// Renders the weekly digest images and the Discord message into out/digest/.
-// Without --queue, uses the featured queue (see config.queues).
+// Renders the weekly digests into out/digest/<format>/: one per format (bo1, bo3), for that
+// format's featured queue (see config.queues), with its images and Discord message.
+// A format whose featured queue has no data for the week that just ended is skipped, so a
+// closed beta queue doesn't get its last week posted again every Monday.
 // Usage: npm run digest [-- --week 2026-09-27] [-- --queue core-bo1] [-- --theme light]
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -11,12 +13,16 @@ import { themes } from '../src/charts/theme.js';
 import { trendsChart } from '../src/charts/trends.js';
 import { config } from '../src/config.js';
 import { buildDigestMessage } from '../src/lib/digest-message.js';
-import { buildReport } from '../src/lib/metrics.js';
-import { pickFeaturedQueue } from '../src/lib/queues.js';
+import { buildReport, countsMatches } from '../src/lib/metrics.js';
+import { lastFinishedWeekEnd, pickFeaturedQueue } from '../src/lib/queues.js';
 import { createDocument, svgToPng } from '../src/lib/render-png.js';
 import { readAllWeeks, readIndex } from '../src/lib/store.js';
 
 export const OUT_DIR = fileURLToPath(new URL('../out/digest/', import.meta.url));
+
+// Posting order on Discord.
+const FORMATS = ['bo1', 'bo3'];
+const formatOf = (index) => (countsMatches(index) ? 'bo3' : 'bo1');
 
 const { values: args } = parseArgs({
   options: {
@@ -30,37 +36,71 @@ const { values: args } = parseArgs({
 const theme = themes[args.theme];
 if (!theme) throw new Error(`Unknown theme: ${args.theme} (light | dark)`);
 
-const index = args.queue
-  ? await readIndex(args.queue)
-  : pickFeaturedQueue(await Promise.all(config.queues.map(readIndex)));
-if (!index) throw new Error(`No data for ${args.queue ?? 'any queue'}: run npm run collect first`);
-const report = buildReport({
-  index,
-  snapshots: await readAllWeeks(index.queue),
-  weekStart: args.week,
-});
-
-const document = createDocument();
-const images = [
-  { file: 'meta.png', svg: metaTableChart(report, { document, theme }) },
-  { file: 'popularite.png', svg: trendsChart(report, { document, theme, metric: 'playRate' }) },
-  { file: 'matchups.png', svg: matchupsChart(report, { document, theme }) },
-  { file: 'winrate.png', svg: trendsChart(report, { document, theme, metric: 'winRate' }) },
-];
-
-await rm(OUT_DIR, { recursive: true, force: true });
-await mkdir(OUT_DIR, { recursive: true });
-for (const image of images) {
-  await writeFile(path.join(OUT_DIR, image.file), svgToPng(image.svg));
+const indexes = (
+  args.queue ? [await readIndex(args.queue)] : await Promise.all(config.queues.map(readIndex))
+).filter(Boolean);
+if (!indexes.length) {
+  throw new Error(`No data for ${args.queue ?? 'any queue'}: run npm run collect first`);
 }
 
-const digest = {
-  queue: report.queue,
-  week: report.week,
-  content: buildDigestMessage(report),
-  images: images.map(({ file, svg }) => ({ file, title: svg.querySelector('title').textContent })),
-};
-await writeFile(path.join(OUT_DIR, 'digest.json'), `${JSON.stringify(digest, null, 2)}\n`);
+const document = createDocument();
 
-console.log(digest.content);
-console.log(`\n${images.length} images in ${path.relative(process.cwd(), OUT_DIR)}/`);
+async function renderDigest(report, dir) {
+  const images = [
+    { file: 'meta.png', svg: metaTableChart(report, { document, theme }) },
+    { file: 'popularite.png', svg: trendsChart(report, { document, theme, metric: 'playRate' }) },
+    { file: 'matchups.png', svg: matchupsChart(report, { document, theme }) },
+    { file: 'winrate.png', svg: trendsChart(report, { document, theme, metric: 'winRate' }) },
+  ];
+  await mkdir(dir, { recursive: true });
+  for (const image of images) {
+    await writeFile(path.join(dir, image.file), svgToPng(image.svg));
+  }
+  const digest = {
+    queue: report.queue,
+    week: report.week,
+    content: buildDigestMessage(report),
+    images: images.map(({ file, svg }) => ({
+      file,
+      title: svg.querySelector('title').textContent,
+    })),
+  };
+  await writeFile(path.join(dir, 'digest.json'), `${JSON.stringify(digest, null, 2)}\n`);
+  return digest;
+}
+
+await rm(OUT_DIR, { recursive: true, force: true });
+const lastEnd = lastFinishedWeekEnd();
+// Always written, so the workflow has an artifact to hand over even when nothing was rendered.
+const summary = { weekEnding: lastEnd, rendered: [], skipped: [] };
+
+for (const format of FORMATS) {
+  const candidates = indexes.filter((index) => formatOf(index) === format);
+  if (!candidates.length) continue;
+  const index = pickFeaturedQueue(candidates);
+  const snapshots = await readAllWeeks(index.queue);
+  const label = format.toUpperCase();
+
+  if (args.week && !snapshots.some((s) => s.week.startDate === args.week)) {
+    console.log(`${label}: ${index.queue} has no week ${args.week}, skipped.\n`);
+    summary.skipped.push({ format, queue: index.queue });
+    continue;
+  }
+  const report = buildReport({ index, snapshots, weekStart: args.week });
+  if (!args.week && !args.queue && report.week.endDate < lastEnd) {
+    console.log(
+      `${label}: ${index.queue} has no data for the week ending ${lastEnd} (latest: ${report.week.endDate}), skipped.\n`,
+    );
+    summary.skipped.push({ format, queue: index.queue });
+    continue;
+  }
+
+  const dir = path.join(OUT_DIR, format);
+  const digest = await renderDigest(report, dir);
+  console.log(`${digest.content}\n\n→ ${path.relative(process.cwd(), dir)}/\n`);
+  summary.rendered.push({ format, queue: report.queue, week: report.week.startDate });
+}
+
+await mkdir(OUT_DIR, { recursive: true });
+await writeFile(path.join(OUT_DIR, 'summary.json'), `${JSON.stringify(summary, null, 2)}\n`);
+if (!summary.rendered.length) console.log('No digest rendered.');

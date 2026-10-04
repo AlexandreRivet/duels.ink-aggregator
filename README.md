@@ -5,8 +5,8 @@ Weekly tracking of the Lorcana meta from the public statistics of
 
 - **collection** of every finished week into `data/`, to keep the history;
 - **web page** (d3.js): meta of the week, trends, matchup matrix;
-- **Discord digest** posted on Monday morning with the same charts as images, to prepare the
-  team's training session that evening.
+- **Discord digest** posted on Monday morning with the same charts as images, one message for
+  BO1 and one for BO3, to prepare the team's training session that evening.
 
 The code and docs are in English; the charts, the page and the Discord message are in French,
 for the team.
@@ -19,9 +19,9 @@ for the team.
 ```
 GitHub Actions, Monday 05:17 UTC
   npm run collect    → data/<queue>/weeks/<start>.json   (committed automatically)
-  npm run digest     → out/digest/*.png + digest.json
+  npm run digest     → out/digest/{bo1,bo3}/*.png + digest.json
   npm run build      → dist/  → GitHub Pages
-  post-discord.js    → message + 4 images in the channel
+  post-discord.js    → one message per format (BO1, then BO3), 4 images each
 ```
 
 The charts are written once (`src/charts/`): the page renders them in the browser, the digest
@@ -38,13 +38,15 @@ Settings (collected queues, number of weeks, thresholds) live in [src/config.js]
 
 ### Queues and set betas
 
-`config.queues` lists the collected queues in priority order. The digest and the page feature the
-first one that has data for the last finished week; the page lets you switch to the others.
+`config.queues` lists the collected queues in priority order. The page features the first one
+that has data for the last finished week and lets you switch to the others. The digest does the
+same per format (BO1, BO3) and skips a format whose queue has no data for the week that just
+ended, so a closed queue never gets its last week posted again.
 
 During a set's beta, put the beta queue first. Right now only the Set 14 betas are collected:
 `quick-play-core-set14` (BO1, featured) and `core-bo3-set14`. When duels.ink closes them at
-release, they stop getting new weeks: put `core-bo1` back at the top of the list then, or the
-digest keeps featuring the last beta week. The BO1 beta is unranked quick play: players
+release, they stop getting new weeks and their digests stop: put `core-bo1` (and `core-bo3`)
+back at the top of the list then. The BO1 beta is unranked quick play: players
 experiment and skill levels are mixed, so read it as an early signal.
 
 In BO3 queues the API counts decks and matchups in **matches** (and `activity.totalGames` in
@@ -58,7 +60,7 @@ npm install
 
 npm run collect    # first run: backfills every week the API exposes (~40 s)
 npm run dev        # page on http://localhost:5173
-npm run digest     # images in out/digest/ (--theme light, --week 2026-09-27)
+npm run digest     # out/digest/bo1/ and bo3/ (--theme light, --week 2026-09-27, --queue core-bo1)
 ```
 
 ## GitHub setup
@@ -73,15 +75,15 @@ npm run digest     # images in out/digest/ (--theme light, --week 2026-09-27)
    send the message).
 
 The workflow then runs on its own every Monday. Locally, `npm run post:discord` reads the
-webhook from `.env` (see `.env.example`); `-- --dry-run` prints the message without sending it.
+webhook from `.env` (see `.env.example`); `-- --dry-run` prints the messages without sending them.
 
 ## Scripts
 
 | Command                | Purpose                                                |
 | ---------------------- | ------------------------------------------------------ |
 | `npm run collect`      | Stores finished weeks that are missing or have changed |
-| `npm run digest`       | Renders the digest images and message                  |
-| `npm run post:discord` | Posts the digest through the Discord webhook           |
+| `npm run digest`       | Renders one digest (images + message) per format       |
+| `npm run post:discord` | Posts each digest as its own Discord message           |
 | `npm run dev`          | Web page locally                                       |
 | `npm run build`        | Static build into `dist/`                              |
 | `npm run check:api`    | API smoke test + payload summary                       |
