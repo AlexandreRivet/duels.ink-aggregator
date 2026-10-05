@@ -71,8 +71,15 @@ jobs:
         id: site
         env:
           GH_TOKEN: ${{ github.token }}
-        # Empty when GitHub Pages is off: the message then goes out without a link
-        run: echo "url=$(gh api "repos/${{ github.repository }}/pages" --jq .html_url 2>/dev/null || true)" >> "$GITHUB_OUTPUT"
+        # Empty when GitHub Pages is off or the API fails: the message then goes out without a
+        # link. On an HTTP error gh still prints the error body, hence the exit-code check.
+        run: |
+          if url=$(gh api "repos/${{ github.repository }}/pages" --jq .html_url 2>/dev/null); then
+            echo "url=$url" >> "$GITHUB_OUTPUT"
+          else
+            echo "No GitHub Pages address: the message goes out without a link"
+            echo "url=" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Post to Discord
         if: github.event_name == 'workflow_run' || inputs.post

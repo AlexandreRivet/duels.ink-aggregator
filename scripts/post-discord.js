@@ -37,7 +37,8 @@ if (!digests.length) {
  * matters: the page otherwise opens on the week in progress, not the one the card describes.
  */
 function pageLink(digest) {
-  if (!process.env.SITE_URL) return null;
+  // Missing or not a URL (e.g. an API error message): no link rather than a crash
+  if (!process.env.SITE_URL || !URL.canParse(process.env.SITE_URL)) return null;
   const link = new URL(process.env.SITE_URL);
   link.searchParams.set('queue', digest.queue);
   link.searchParams.set('week', digest.week.startDate);
