@@ -3,10 +3,12 @@
 Weekly tracking of the Lorcana meta from the public statistics of
 [duels.ink](https://duels.ink/stats) (`/api/stats/meta` endpoint):
 
-- **collection** of every finished week into `data/`, to keep the history;
-- **web page** (d3.js): meta of the week, trends, matchup matrix;
-- **Discord digest** posted on Monday morning with the same charts as images, one message for
-  BO1 and one for BO3, to prepare the team's training session that evening.
+- **collection** every morning into `data/`: finished weeks, to keep the history, and the week
+  in progress;
+- **web page** (d3.js), refreshed every morning: meta of the week, trends, matchup matrix;
+- **Discord digest** posted on Monday morning for the week that just ended, with the same charts
+  as images, one message for BO1 and one for BO3, to prepare the team's training session that
+  evening.
 
 The code and docs are in English; the charts, the page and the Discord message are in French,
 for the team. Decks are shown by their two ink chips (coloured-circle emoji in the Discord
@@ -18,15 +20,18 @@ text); names remain in tooltips and for screen readers.
 ## How it works
 
 ```
-GitHub Actions, Monday 08:00 UTC (10:00 / 9:00 in Paris)
+Daily data aggregation — every day at 06:00 UTC (8:00 / 7:00 in Paris)
   npm run collect    → data/<queue>/weeks/<start>.json   (committed automatically)
-  npm run digest     → out/digest/{bo1,bo3}/*.png + digest.json
-  npm run build      → dist/  → GitHub Pages
+  Website deploy     → npm run build → dist/ → GitHub Pages
+
+Weekly Discord report — right after the daily aggregation, on Mondays
+  npm run digest     → out/digest/{bo1,bo3}/*.png + digest.json   (last finished week)
   post-discord.js    → one compact card per format (BO1, then BO3), charts in a 2×2 grid
 ```
 
 Every push to `main` (a merged pull request included) also rebuilds and redeploys the page
-([pages.yml](.github/workflows/pages.yml)); the two workflows never deploy at the same time.
+([website-deploy.yml](.github/workflows/website-deploy.yml)), the same workflow the daily
+aggregation calls after committing its data; deployments run one at a time.
 
 The charts are written once (`src/charts/`): the page renders them in the browser, the digest
 renders them in Node (jsdom + resvg, bundled Inter font), with no headless browser.
@@ -81,10 +86,10 @@ npm run digest     # out/digest/bo1/ and bo3/ (--theme light, --week 2026-09-27,
 3. Optional: **Settings → Pages → Source: GitHub Actions** to publish the page. On a private
    repo this needs GitHub Pro, and the published site is public. Without Pages, the deploy job
    fails but the Discord message still goes out, without a link.
-4. **Actions → Weekly digest → Run workflow** to test (tick "Post the digest to Discord" to
+4. **Actions → Weekly Discord report → Run workflow** to test (tick "Post the digest to Discord" to
    send the message).
 
-The workflow then runs on its own every Monday. Locally, `npm run post:discord` reads the
+Both workflows then run on their own: the aggregation every morning, the report on Mondays. Locally, `npm run post:discord` reads the
 webhook from `.env` (see `.env.example`); `-- --dry-run` prints the messages without sending them.
 
 ## Scripts
@@ -105,7 +110,14 @@ webhook from `.env` (see `.env.example`); `-- --dry-run` prints the messages wit
   recomputed (the deck's `games` / total decks played).
 - Weeks run Sunday to Saturday. duels.ink computes them every night around 01:30 UTC and
   freezes them after Saturday's computation, so the rest of Saturday is never counted. The
-  collector fetches a week again if its game count in `availableWeeks` changes.
+  collector stores the week in progress too and fetches a week again whenever its game count
+  in `availableWeeks` changes: daily while it runs, rarely afterwards. The page shows the week
+  in progress, marked "en cours"; the digest always covers the last finished week.
+- A chart is only shown with enough data to say something (`minWeekSample`, 500 games or BO3
+  matches a week; a previous week under it isn't compared with; Évolution needs two such weeks;
+  the matchup matrix and deck sheet need half their cells over 100 games). Otherwise the page
+  shows a note with the reason and Discord leaves the chart out — a text-only card if none is
+  left.
 - A single week is too thin for matchups (many cells under 100 games): the matrix sums 4
   weeks, never reaching back before the current set's release.
 - A change is shown as real only when its 95% interval excludes 0 (grey otherwise). Matchup
