@@ -2,6 +2,9 @@ name: Weekly Discord report
 
 on:
   # Right after the daily aggregation, so the report uses that morning's data; Mondays only.
+  # Whatever the aggregation's outcome: the finished week it reports on was stored by an earlier
+  # run, and the digest skips a format with no data for it. A failed deploy (Pages off or down)
+  # or a failed Monday collection no longer cancels the report.
   workflow_run:
     workflows: [Daily data aggregation]
     types: [completed]
@@ -18,11 +21,10 @@ concurrency:
 
 jobs:
   gate:
-    # Only after a successful scheduled aggregation (not a manual one), or by hand
+    # After a scheduled aggregation (not a manual one), whatever its outcome; or by hand
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'schedule')
+      github.event.workflow_run.event == 'schedule'
     runs-on: ubuntu-latest
     outputs:
       go: ${{ steps.day.outputs.go }}
@@ -30,7 +32,9 @@ jobs:
       - id: day
         env:
           EVENT: ${{ github.event_name }}
+          AGGREGATION: ${{ github.event.workflow_run.conclusion }}
         run: |
+          if [ "$EVENT" = workflow_run ]; then echo "Daily aggregation: $AGGREGATION"; fi
           if [ "$EVENT" = workflow_dispatch ] || [ "$(date -u +%u)" = 1 ]; then
             echo "go=true" >> "$GITHUB_OUTPUT"
           else
