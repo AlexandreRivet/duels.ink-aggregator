@@ -32,11 +32,15 @@ if (!digests.length) {
   process.exit(0);
 }
 
-/** The published page, opened on the digest's queue (null when Pages is off). */
+/**
+ * The published page, opened on the digest's queue and week (null when Pages is off). The week
+ * matters: the page otherwise opens on the week in progress, not the one the card describes.
+ */
 function pageLink(digest) {
   if (!process.env.SITE_URL) return null;
   const link = new URL(process.env.SITE_URL);
   link.searchParams.set('queue', digest.queue);
+  link.searchParams.set('week', digest.week.startDate);
   return link.href;
 }
 
