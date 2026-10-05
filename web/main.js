@@ -79,7 +79,7 @@ function readUrlState() {
   const params = new URLSearchParams(location.search);
   return {
     queue: params.get('queue'),
-    week: params.get('semaine'),
+    week: params.get('week'),
     matchupWeeks: Number(params.get('matchups')) || config.matchupWeeks,
     // Deck shown in the deck sheet (null: the most played one).
     deck: params.get('deck'),
@@ -89,7 +89,7 @@ function readUrlState() {
 function writeUrlState() {
   const params = new URLSearchParams();
   if (state.queue !== featuredQueue) params.set('queue', state.queue);
-  if (state.week) params.set('semaine', state.week);
+  if (state.week) params.set('week', state.week);
   if (state.matchupWeeks !== config.matchupWeeks) params.set('matchups', state.matchupWeeks);
   if (state.deck) params.set('deck', state.deck);
   const query = params.toString();
