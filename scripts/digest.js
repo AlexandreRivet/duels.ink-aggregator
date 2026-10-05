@@ -98,9 +98,16 @@ const summary = { weekEnding: lastEnd, rendered: [], skipped: [] };
 for (const format of FORMATS) {
   const candidates = indexes.filter((index) => formatOf(index) === format);
   if (!candidates.length) continue;
-  const index = pickFeaturedQueue(candidates);
-  const snapshots = await readAllWeeks(index.queue);
   const label = format.toUpperCase();
+  const index = pickFeaturedQueue(candidates);
+  // A queue id the API doesn't know still gets an index, with no week in it
+  if (!index) {
+    const queues = candidates.map((c) => c.queue).join(', ');
+    console.log(`${label}: no week collected for ${queues}, skipped.\n`);
+    summary.skipped.push({ format, queue: candidates[0].queue });
+    continue;
+  }
+  const snapshots = await readAllWeeks(index.queue);
 
   // The last finished week (the one in progress is stored too, for the page)
   const finished = snapshots.filter((s) => s.week.endDate <= lastEnd);

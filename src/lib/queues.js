@@ -20,13 +20,15 @@ export function isWeekComplete(week, today = new Date()) {
  * with the most recent data, so a closed queue never wins over a live one.
  *
  * @param {object[]} indexes contents of data/<queue>/index.json, in priority order
+ * @returns {object | null} null when no index has any week
  */
 export function pickFeaturedQueue(indexes, today = new Date()) {
   const lastEnd = lastFinishedWeekEnd(today);
   const latest = (index) => index.weeks.at(-1)?.endDate ?? '';
   const candidates = indexes.filter((index) => index?.weeks.length);
+  if (!candidates.length) return null;
   return (
     candidates.find((index) => latest(index) >= lastEnd) ??
-    candidates.reduce((best, index) => (latest(index) > latest(best) ? index : best), candidates[0])
+    candidates.reduce((best, index) => (latest(index) > latest(best) ? index : best))
   );
 }

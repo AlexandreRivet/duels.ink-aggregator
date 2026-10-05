@@ -99,7 +99,10 @@ function writeUrlState() {
 // --- Filters ---
 
 async function setupFilters() {
-  const indexes = (await Promise.all(config.queues.map(loadIndex))).filter(Boolean);
+  // Only queues with at least one week: one the API doesn't know has an empty index
+  const indexes = (await Promise.all(config.queues.map(loadIndex))).filter(
+    (index) => index?.weeks.length,
+  );
   if (!indexes.length) throw new Error('No data collected yet');
   featuredQueue = pickFeaturedQueue(indexes).queue;
   if (!indexes.some((index) => index.queue === state.queue)) state.queue = featuredQueue;
