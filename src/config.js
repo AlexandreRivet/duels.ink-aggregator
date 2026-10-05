@@ -20,6 +20,12 @@ export const config = {
   /** Floor under the top decks: a deck below this play rate (%) is never shown. */
   minPlayRate: 1,
 
+  /**
+   * Minimum games (BO3: matches) in a week for its charts to be shown, and for it to be
+   * compared with: below, the page shows a note and Discord leaves the charts out.
+   */
+  minWeekSample: 500,
+
   /** Number of weeks shown in the trend chart. */
   trendWeeks: 12,
 

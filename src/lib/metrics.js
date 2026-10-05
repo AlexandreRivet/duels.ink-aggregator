@@ -5,6 +5,7 @@
 import { config as defaults } from '../config.js';
 import { UNITS } from './format.js';
 import { deckKey } from './inks.js';
+import { isWeekComplete } from './queues.js';
 
 const DAY_MS = 86_400_000;
 
@@ -258,9 +259,13 @@ function weekAxisPosition(weekStarts, isoDateTime) {
  * @param {object[]} params.snapshots weekly snapshots (data/<queue>/weeks/*.json)
  * @param {string} [params.weekStart] target week (default: the latest collected)
  * @param {Partial<typeof defaults>} [params.options]
+ * @param {Date} [params.today] to tell finished weeks from the one in progress
  */
-export function buildReport({ index, snapshots, weekStart, options = {} }) {
+export function buildReport({ index, snapshots, weekStart, options = {}, today = new Date() }) {
   const opts = { ...defaults, ...options };
+  const perMatch = countsMatches(index);
+  const size = (snapshot) => sampleSize(snapshot, perMatch);
+  const sumSize = (list) => list.reduce((total, snapshot) => total + size(snapshot), 0);
   const byStart = new Map(snapshots.map((s) => [s.week.startDate, s]));
   const starts = [...byStart.keys()].sort();
   if (!starts.length) throw new Error(`No week collected for ${index.queue}`);
@@ -268,7 +273,9 @@ export function buildReport({ index, snapshots, weekStart, options = {} }) {
   const targetIdx = weekStart ? starts.indexOf(weekStart) : starts.length - 1;
   if (targetIdx < 0) throw new Error(`Week ${weekStart} is not in the data`);
   const target = byStart.get(starts[targetIdx]);
-  const previous = targetIdx > 0 ? byStart.get(starts[targetIdx - 1]) : null;
+  // A previous week too thin to compare with counts as no previous week at all.
+  const before = targetIdx > 0 ? byStart.get(starts[targetIdx - 1]) : null;
+  const previous = before && size(before) >= opts.minWeekSample ? before : null;
 
   const statsByWeek = new Map();
   const statsOf = (start) => {
@@ -367,10 +374,6 @@ export function buildReport({ index, snapshots, weekStart, options = {} }) {
     bestWinRate: [...decks].sort((a, b) => b.ci[0] - a.ci[0])[0] ?? null,
   };
 
-  const perMatch = countsMatches(index);
-  const size = (snapshot) => sampleSize(snapshot, perMatch);
-  const sumSize = (list) => list.reduce((total, snapshot) => total + size(snapshot), 0);
-
   return {
     queue: index.queue,
     queueName: index.queueName ?? index.queue,
@@ -378,13 +381,20 @@ export function buildReport({ index, snapshots, weekStart, options = {} }) {
     unit: perMatch ? UNITS.match : UNITS.game,
     options: opts,
     era: era ? { key: era.key, name: era.name } : null,
-    week: { ...target.week, sampleSize: size(target), updatedAt: target.updatedAt },
+    week: {
+      ...target.week,
+      sampleSize: size(target),
+      updatedAt: target.updatedAt,
+      // false for the week in progress: its figures grow every night
+      complete: isWeekComplete(target.week, today),
+    },
     previousWeek: previous ? { ...previous.week, sampleSize: size(previous) } : null,
     decks,
     trend: {
       weeks: trendStarts,
       endDate: target.week.endDate,
       sampleSize: sumSize(trendStarts.map((start) => byStart.get(start))),
+      sampleSizes: trendStarts.map((start) => size(byStart.get(start))),
       eraMarkers,
     },
     matchups: {
