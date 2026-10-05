@@ -64,5 +64,10 @@ export function formatWeekRange(startDate, endDate) {
   return `${dayMonth.format(parseDay(startDate))} – ${dayMonthYear.format(parseDay(endDate))}`;
 }
 
+/** A report's week: "27 sept. – 3 oct. 2026", plus "(en cours)" while it is in progress. */
+export function formatWeek(week) {
+  return `${formatWeekRange(week.startDate, week.endDate)}${week.complete === false ? ' (en cours)' : ''}`;
+}
+
 /** ISO timestamp → "4 oct. 2026, 03:36" (Paris time). */
 export const formatUpdatedAt = (iso) => (iso ? dateTimeParis.format(new Date(iso)) : '—');

@@ -32,7 +32,7 @@ export function moversChart(report, { document, theme, width = 800 }) {
   let y = header(svg, {
     title,
     subtitle: previousWeek
-      ? `${report.queueName} · semaine du ${formatDay(week.startDate)} vs semaine du ${formatDay(
+      ? `${report.queueName} · semaine du ${formatDay(week.startDate)}${week.complete === false ? ' (en cours)' : ''} vs semaine du ${formatDay(
           previousWeek.startDate,
         )}`
       : report.queueName,

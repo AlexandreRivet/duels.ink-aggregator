@@ -5,7 +5,7 @@
  * a hollow dot mark last week's values, and the changes are bold when they beat the noise.
  */
 import { max, min, scaleLinear } from 'd3';
-import { formatCount, formatDelta, formatInt, formatPct, formatWeekRange } from '../lib/format.js';
+import { formatCount, formatDelta, formatInt, formatPct, formatWeek } from '../lib/format.js';
 import { deckName } from '../lib/inks.js';
 import {
   PAD,
@@ -29,8 +29,11 @@ export const SIGNAL_LABELS = {
   below: 'En dessous de 50 %',
 };
 
-/** A change in points, right-aligned: bold when it beats the noise, muted otherwise. */
-function deltaText(row, { x, cy, delta, change, theme }) {
+/**
+ * A change in points, right-aligned: bold when it beats the noise, muted otherwise. Without a
+ * change: "nouveau" if the deck wasn't there last week, "—" if there's no week to compare with.
+ */
+function deltaText(row, { x, cy, delta, change, theme, comparable }) {
   const significant = change && change.signal !== 'flat';
   row
     .append('text')
@@ -40,7 +43,7 @@ function deltaText(row, { x, cy, delta, change, theme }) {
     .attr('font-weight', significant ? 600 : 400)
     .attr('fill', delta == null ? theme.muted : significant ? theme.text : theme.muted)
     .attr('text-anchor', 'end')
-    .text(delta == null ? 'nouveau' : formatDelta(delta));
+    .text(delta == null ? (comparable ? 'nouveau' : '—') : formatDelta(delta));
 }
 
 export function metaTableChart(report, { document, theme, width = 800 }) {
@@ -50,7 +53,7 @@ export function metaTableChart(report, { document, theme, width = 800 }) {
 
   let y = header(svg, {
     title,
-    subtitle: `${report.queueName} · ${formatWeekRange(week.startDate, week.endDate)} · ${formatCount(
+    subtitle: `${report.queueName} · ${formatWeek(week)} · ${formatCount(
       week.sampleSize,
       unit,
     )} · les ${decks.length} decks les plus joués`,
@@ -181,6 +184,7 @@ export function metaTableChart(report, { document, theme, width = 800 }) {
       .text(formatPct(deck.playRate));
 
     deltaText(row, {
+      comparable: Boolean(report.previousWeek),
       x: col.deltaPlay,
       cy,
       delta: deck.deltaPlayRate,
@@ -228,6 +232,7 @@ export function metaTableChart(report, { document, theme, width = 800 }) {
       .attr('text-anchor', 'end')
       .text(formatPct(deck.winRate));
     deltaText(row, {
+      comparable: Boolean(report.previousWeek),
       x: col.deltaWin,
       cy,
       delta: deck.deltaWinRate,

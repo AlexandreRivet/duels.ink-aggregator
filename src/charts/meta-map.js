@@ -5,7 +5,7 @@
  * left rarely played but strong. Deck names are in the tooltips and the table view.
  */
 import { max, median, min, scaleLinear } from 'd3';
-import { formatCount, formatPct, formatWeekRange } from '../lib/format.js';
+import { formatCount, formatPct, formatWeek } from '../lib/format.js';
 import { INKS, deckName } from '../lib/inks.js';
 import { PAD, createSvg, finalize, footer, header, inkChips, middle } from './common.js';
 
@@ -23,7 +23,7 @@ export function metaMapChart(report, { document, theme, width = 800 }) {
   const top =
     header(svg, {
       title,
-      subtitle: `${report.queueName} · ${formatWeekRange(week.startDate, week.endDate)}`,
+      subtitle: `${report.queueName} · ${formatWeek(week)}`,
       theme,
     }) + 28;
 

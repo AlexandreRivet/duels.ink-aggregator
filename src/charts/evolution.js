@@ -142,7 +142,9 @@ export function evolutionChart(report, { document, theme, width = 800 }) {
         .attr('font-weight', significant ? 600 : 400)
         .attr('fill', significant ? theme.text2 : theme.muted)
         .attr('text-anchor', 'end')
-        .text(v.delta == null ? 'nouveau' : `${formatDelta(v.delta)} pt`);
+        .text(
+          v.delta == null ? (report.previousWeek ? 'nouveau' : '—') : `${formatDelta(v.delta)} pt`,
+        );
     }
 
     const plot = panel.append('g').attr('transform', `translate(0,${PANEL_HEADER})`);
