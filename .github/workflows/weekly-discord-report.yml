@@ -1,0 +1,78 @@
+name: Weekly Discord report
+
+on:
+  # Right after the daily aggregation, so the report uses that morning's data; Mondays only.
+  workflow_run:
+    workflows: [Daily data aggregation]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      post:
+        description: Post the digest to Discord
+        type: boolean
+        default: false
+
+concurrency:
+  group: weekly-discord-report
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    # Only after a successful scheduled aggregation (not a manual one), or by hand
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'schedule')
+    runs-on: ubuntu-latest
+    outputs:
+      go: ${{ steps.day.outputs.go }}
+    steps:
+      - id: day
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" = workflow_dispatch ] || [ "$(date -u +%u)" = 1 ]; then
+            echo "go=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "go=false" >> "$GITHUB_OUTPUT"
+            echo "Not Monday: no report today"
+          fi
+
+  report:
+    needs: gate
+    if: needs.gate.outputs.go == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: read
+    steps:
+      # The default branch's latest commit: it includes this morning's data commit
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+
+      - name: Render the digest images
+        run: npm run digest
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: digest
+          path: out/digest
+          retention-days: 30
+
+      - name: Find the page's address
+        id: site
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # Empty when GitHub Pages is off: the message then goes out without a link
+        run: echo "url=$(gh api "repos/${{ github.repository }}/pages" --jq .html_url 2>/dev/null || true)" >> "$GITHUB_OUTPUT"
+
+      - name: Post to Discord
+        if: github.event_name == 'workflow_run' || inputs.post
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          SITE_URL: ${{ steps.site.outputs.url }}
+        run: node scripts/post-discord.js

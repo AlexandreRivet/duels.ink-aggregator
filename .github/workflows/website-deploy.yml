@@ -1,23 +1,28 @@
-name: Deploy page
+name: Website deploy
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
+  # Also called by the daily data aggregation once the morning's data is committed: a push
+  # made with the workflow token doesn't trigger other workflows by itself.
+  workflow_call:
+    inputs:
+      ref:
+        description: 'Git ref to build (default: the commit that triggered the run)'
+        type: string
+        default: ''
 
 permissions:
   contents: read
-
-# One Pages deployment at a time, shared with the weekly workflow; never cancel one midway.
-concurrency:
-  group: pages
-  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref }}
       - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
@@ -32,6 +37,11 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    # One Pages deployment at a time, never cancelled midway (job level, so it also holds when
+    # this workflow is called by another one)
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     permissions:
       pages: write
       id-token: write
