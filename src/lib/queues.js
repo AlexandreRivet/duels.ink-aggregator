@@ -16,8 +16,9 @@ export function isWeekComplete(week, today = new Date()) {
 }
 
 /**
- * First index, in the given order, whose data covers the last finished week; otherwise the one
- * with the most recent data, so a closed queue never wins over a live one.
+ * First index, in the given order, with data for the last finished week (the week in progress
+ * doesn't count: a queue that just opened would win with no finished week to show); otherwise the
+ * one with the most recent data, so a closed queue never wins over a live one.
  *
  * @param {object[]} indexes contents of data/<queue>/index.json, in priority order
  * @returns {object | null} null when no index has any week
@@ -28,7 +29,7 @@ export function pickFeaturedQueue(indexes, today = new Date()) {
   const candidates = indexes.filter((index) => index?.weeks.length);
   if (!candidates.length) return null;
   return (
-    candidates.find((index) => latest(index) >= lastEnd) ??
+    candidates.find((index) => index.weeks.some((week) => week.endDate === lastEnd)) ??
     candidates.reduce((best, index) => (latest(index) > latest(best) ? index : best))
   );
 }
