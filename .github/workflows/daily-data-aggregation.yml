@@ -2,9 +2,10 @@ name: Daily data aggregation
 
 on:
   schedule:
-    # Every morning at 06:00 UTC = 8:00 (summer) / 7:00 (winter) in Paris, after duels.ink's
-    # nightly recompute (~01:30 UTC). GitHub may start scheduled runs a few minutes late.
-    - cron: '0 6 * * *'
+    # Every morning at 06:07 UTC = 8:07 (summer) / 7:07 (winter) in Paris, after duels.ink's
+    # nightly recompute (~01:30 UTC). Off the hour: GitHub delays, and sometimes drops,
+    # scheduled runs set exactly on the hour the most.
+    - cron: '7 6 * * *'
   workflow_dispatch:
 
 concurrency:

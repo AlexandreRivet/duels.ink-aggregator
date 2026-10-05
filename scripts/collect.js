@@ -1,5 +1,6 @@
-// Stores every finished duels.ink week in data/<queue>/weeks/.
-// On the first run, backfills every week the API still exposes.
+// Stores every duels.ink week in data/<queue>/weeks/, the one in progress included.
+// On the first run, backfills every week the API still exposes. A queue that fails doesn't stop
+// the others; the run only fails when no queue could be collected.
 // Usage: npm run collect [-- queue …]
 import { setTimeout as sleep } from 'node:timers/promises';
 import { config } from '../src/config.js';
@@ -11,14 +12,17 @@ const REQUEST_INTERVAL_MS = 1100;
 
 const queues = process.argv.length > 2 ? process.argv.slice(2) : config.queues;
 
-async function fetchWithRetry(params, attempts = 3) {
+/** Fetches, retrying rate limits, server errors and network failures with a growing delay. */
+async function fetchWithRetry(params, attempts = 4) {
   for (let attempt = 1; ; attempt++) {
     try {
       return await fetchMeta(params);
     } catch (error) {
-      if (!error.retryAfter || attempt >= attempts) throw error;
-      console.warn(`  ${error.message}`);
-      await sleep(error.retryAfter * 1000);
+      if (!error.retryable || attempt >= attempts) throw error;
+      // A rate limit says how long to wait; otherwise 5 s, 10 s, 20 s
+      const wait = error.retryAfter ?? 5 * 2 ** (attempt - 1);
+      console.warn(`  ${error.message} (attempt ${attempt}/${attempts}, retrying in ${wait} s)`);
+      await sleep(wait * 1000);
     }
   }
 }
@@ -53,7 +57,7 @@ function toSnapshot(queue, week, { data, etag }) {
   };
 }
 
-for (const queue of queues) {
+async function collectQueue(queue) {
   console.log(`▸ ${queue}`);
   const { data: overview } = await fetchWithRetry({ queue });
   const { meta } = overview;
@@ -114,3 +118,16 @@ for (const queue of queues) {
 
   console.log(`  ${written} week(s) written, ${snapshots.length} stored`);
 }
+
+const failed = [];
+for (const queue of queues) {
+  try {
+    await collectQueue(queue);
+  } catch (error) {
+    failed.push(queue);
+    // GitHub annotation: shows in the run summary without stopping the other queues
+    console.log(`::error title=Collect ${queue}::${error.message}`);
+  }
+}
+// Fail only when nothing could be collected; otherwise the queues that worked get committed
+if (failed.length === queues.length) process.exitCode = 1;

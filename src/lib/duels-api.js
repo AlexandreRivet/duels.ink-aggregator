@@ -7,6 +7,16 @@
 
 export const BASE_URL = 'https://duels.ink';
 
+/** Seconds to wait from a Retry-After header (seconds or an HTTP date); 60 when unusable. */
+export function retryAfterSeconds(value, now = Date.now()) {
+  if (value == null || value === '') return 60;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds)) return Math.max(1, seconds);
+  const date = Date.parse(value);
+  if (Number.isFinite(date)) return Math.max(1, Math.ceil((date - now) / 1000));
+  return 60;
+}
+
 /**
  * @param {object} [options]
  * @param {string} [options.queue='core-bo1'] Always pass it explicitly.
@@ -26,17 +36,31 @@ export async function fetchMeta({ queue = 'core-bo1', era, period, ranks, etag }
   const headers = { Accept: 'application/json' };
   if (etag) headers['If-None-Match'] = etag;
 
-  const res = await fetch(url, { headers });
+  let res;
+  try {
+    res = await fetch(url, { headers });
+  } catch (error) {
+    // Network failure (DNS, reset, timeout): worth another try
+    throw Object.assign(new Error(`Network error on ${url}: ${error.message}`), {
+      retryable: true,
+    });
+  }
 
   if (res.status === 304) {
     return { status: 304, etag, data: null };
   }
 
   if (res.status === 429) {
-    const retryAfter = Number(res.headers.get('retry-after') ?? 60);
+    const retryAfter = retryAfterSeconds(res.headers.get('retry-after'));
     throw Object.assign(new Error(`Rate limited, retry in ${retryAfter}s`), {
       retryAfter,
+      retryable: true,
     });
+  }
+
+  // Server-side trouble is usually short-lived: worth another try
+  if (res.status >= 500) {
+    throw Object.assign(new Error(`HTTP ${res.status} on ${url}`), { retryable: true });
   }
 
   if (!res.ok) {
