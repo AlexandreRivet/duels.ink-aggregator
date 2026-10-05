@@ -18,7 +18,8 @@ import {
 } from '../src/lib/format.js';
 import { INKS, deckEmoji, deckName } from '../src/lib/inks.js';
 import { buildReport, countsMatches, sampleSize, wilson } from '../src/lib/metrics.js';
-import { pickFeaturedQueue } from '../src/lib/queues.js';
+import { isWeekComplete, pickFeaturedQueue } from '../src/lib/queues.js';
+import { chartRelevance } from '../src/lib/relevance.js';
 
 const BASE = import.meta.env.BASE_URL;
 const $ = (id) => document.getElementById(id);
@@ -136,7 +137,7 @@ function fillWeekSelect(index, snapshots, unit, selected) {
         `${formatWeekRange(snapshot.week.startDate, snapshot.week.endDate)} · ${formatCount(
           sampleSize(snapshot, perMatch),
           unit,
-        )}`,
+        )}${isWeekComplete(snapshot.week) ? '' : ' · en cours'}`,
       ),
     ),
   );
@@ -170,13 +171,21 @@ function kpi(label, value, detail) {
   return tile;
 }
 
-function renderKpis(report) {
+function renderKpis(report, relevance) {
   const { week, previousWeek, summary, unit } = report;
   const { topDeck, risers, bestWinRate } = summary;
-  const volumeChange = previousWeek?.sampleSize
-    ? `${formatDelta((100 * (week.sampleSize - previousWeek.sampleSize)) / previousWeek.sampleSize)} % vs semaine précédente`
-    : null;
+  // A week in progress keeps growing: its volume isn't comparable with a full week yet
+  let volumeChange = null;
+  if (!week.complete) volumeChange = 'Semaine en cours · mise à jour chaque matin';
+  else if (previousWeek?.sampleSize) {
+    volumeChange = `${formatDelta((100 * (week.sampleSize - previousWeek.sampleSize)) / previousWeek.sampleSize)} % vs semaine précédente`;
+  }
 
+  // Too little data: only the volume, with the reason; the other figures would mean nothing
+  if (!relevance.week.ok) {
+    $('kpis').replaceChildren(kpi(unit.played, formatInt(week.sampleSize), relevance.week.reason));
+    return;
+  }
   const tiles = [kpi(unit.played, formatInt(week.sampleSize), volumeChange)];
   if (topDeck) {
     tiles.push(kpi('Deck le plus joué', topDeck, `${formatPct(topDeck.playRate)} des decks`));
@@ -364,8 +373,19 @@ function card({ id, svg, table: tableNode, controls }, opened) {
   return figure;
 }
 
+/** Stand-in for a chart without enough data: its title and why it isn't shown. */
+function emptyCard({ id, title, reason, controls }) {
+  const figure = el('figure', { class: 'card card-empty', id });
+  if (controls) figure.append(controls);
+  figure.append(
+    el('h2', { class: 'card-empty-title' }, title),
+    el('p', { class: 'card-empty-reason' }, reason),
+  );
+  return figure;
+}
+
 /** The deck sheet card, with its deck picker; changing the deck redraws only this card. */
-function deckSheetCard(report, theme, opened) {
+function deckSheetCard(report, theme, opened, relevance) {
   const { decks } = report;
   const key = decks.some((d) => d.key === state.deck) ? state.deck : decks[0].key;
   const select = el('select', { 'aria-label': 'Deck de la fiche' });
@@ -375,12 +395,16 @@ function deckSheetCard(report, theme, opened) {
   select.addEventListener('change', () => {
     state.deck = select.value === decks[0].key ? null : select.value;
     writeUrlState();
-    const fresh = deckSheetCard(report, theme, openedTables());
+    const fresh = deckSheetCard(report, theme, openedTables(), relevance);
     $('fiche').replaceWith(fresh);
     fresh.querySelector('select').focus();
   });
   const controls = el('label', { class: 'card-control' });
   controls.append(el('span', {}, 'Deck'), select);
+  // The picker stays: another deck may have enough games
+  const check = relevance.deckSheet(key);
+  if (!check.ok)
+    return emptyCard({ id: 'fiche', title: 'Fiche deck', reason: check.reason, controls });
   return card(
     {
       id: 'fiche',
@@ -392,40 +416,65 @@ function deckSheetCard(report, theme, opened) {
   );
 }
 
-function renderCharts(report) {
+function renderCharts(report, relevance) {
   const theme = darkQuery.matches ? themes.dark : themes.light;
   const container = $('charts');
   const opened = openedTables();
 
+  // Built only when there is enough data to show them
   const charts = [
-    { id: 'meta', svg: metaTableChart(report, { document, theme }), table: metaTableView(report) },
-    // Same figures as the meta table, placed on a map: same table view.
-    { id: 'carte', svg: metaMapChart(report, { document, theme }), table: metaTableView(report) },
+    {
+      id: 'meta',
+      title: 'Méta de la semaine',
+      check: relevance.meta,
+      svg: () => metaTableChart(report, { document, theme }),
+      table: () => metaTableView(report),
+    },
+    {
+      // Same figures as the meta table, placed on a map: same table view.
+      id: 'carte',
+      title: 'Carte du méta',
+      check: relevance.map,
+      svg: () => metaMapChart(report, { document, theme }),
+      table: () => metaTableView(report),
+    },
     {
       id: 'mouvements',
-      svg: moversChart(report, { document, theme }),
-      table: moversTableView(report),
+      title: 'Mouvements de la semaine',
+      check: relevance.movers,
+      svg: () => moversChart(report, { document, theme }),
+      table: () => moversTableView(report),
     },
     {
       id: 'evolution',
-      svg: evolutionChart(report, { document, theme }),
-      table: evolutionTableView(report),
+      title: 'Évolution',
+      check: relevance.evolution,
+      svg: () => evolutionChart(report, { document, theme }),
+      table: () => evolutionTableView(report),
     },
     {
       id: 'matchups',
-      svg: matchupsChart(report, { document, theme }),
-      table: matchupTableView(report),
+      title: 'Matchups',
+      check: relevance.matchups,
+      svg: () => matchupsChart(report, { document, theme }),
+      table: () => matchupTableView(report),
     },
     {
       id: 'premier',
-      svg: playDrawChart(report, { document, theme }),
-      table: playDrawTableView(report),
+      title: 'Commencer ou jouer en second',
+      check: relevance.playDraw,
+      svg: () => playDrawChart(report, { document, theme }),
+      table: () => playDrawTableView(report),
     },
   ];
 
-  const cards = charts.map((chart) => card(chart, opened));
+  const cards = charts.map(({ id, title, check, svg, table: tableView }) =>
+    check.ok
+      ? card({ id, svg: svg(), table: tableView() }, opened)
+      : emptyCard({ id, title, reason: check.reason }),
+  );
   // The deck sheet sits next to the matchup matrix.
-  cards.splice(5, 0, deckSheetCard(report, theme, opened));
+  cards.splice(5, 0, deckSheetCard(report, theme, opened, relevance));
   container.replaceChildren(...cards);
 }
 
@@ -454,8 +503,9 @@ async function render() {
     const collected = index.weeks.length > 1 ? 'semaines collectées' : 'semaine collectée';
     $('subtitle').textContent =
       `${report.queueName} · ${index.weeks.length} ${collected} · données duels.ink du ${formatUpdatedAt(report.week.updatedAt)}`;
-    renderKpis(report);
-    renderCharts(report);
+    const relevance = chartRelevance(report);
+    renderKpis(report, relevance);
+    renderCharts(report, relevance);
   } catch (error) {
     showError(error);
   } finally {
@@ -509,7 +559,7 @@ document.addEventListener('focusout', () => {
 });
 
 darkQuery.addEventListener('change', () => {
-  if (lastReport) renderCharts(lastReport);
+  if (lastReport) renderCharts(lastReport, chartRelevance(lastReport));
 });
 
 setupFilters().then(render, showError);

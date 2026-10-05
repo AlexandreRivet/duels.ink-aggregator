@@ -229,6 +229,25 @@ a {
   stroke-width: 2;
 }
 
+.card-empty {
+  padding: 24px;
+}
+
+.card-empty .card-control {
+  padding: 0 0 16px;
+}
+
+.card-empty-title {
+  margin: 0 0 6px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.card-empty-reason {
+  margin: 0;
+  color: var(--text-2);
+}
+
 .table-view {
   border-top: 1px solid var(--border);
   padding: 0 24px;
