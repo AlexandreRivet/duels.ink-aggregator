@@ -1,7 +1,8 @@
 // Renders the weekly digests into out/digest/<format>/: one per format (bo1, bo3), for that
 // format's featured queue (see config.queues), with its images and Discord message.
-// A format whose featured queue has no data for the week that just ended is skipped, so a
-// closed beta queue doesn't get its last week posted again every Monday.
+// The digest covers the last finished week, never the one in progress. A format whose queue has
+// no data for it is skipped, so a closed beta queue isn't posted again every Monday. Charts
+// without enough data are left out; with none, the card is text only.
 // Usage: npm run digest [-- --week 2026-09-27] [-- --queue core-bo1] [-- --theme light]
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -15,6 +16,7 @@ import { themes } from '../src/charts/theme.js';
 import { config } from '../src/config.js';
 import { buildDigestCard } from '../src/lib/digest-message.js';
 import { buildReport, countsMatches } from '../src/lib/metrics.js';
+import { chartRelevance } from '../src/lib/relevance.js';
 import { lastFinishedWeekEnd, pickFeaturedQueue } from '../src/lib/queues.js';
 import { createDocument, svgToPng } from '../src/lib/render-png.js';
 import { readAllWeeks, readIndex } from '../src/lib/store.js';
@@ -47,14 +49,33 @@ if (!indexes.length) {
 const document = createDocument();
 
 async function renderDigest(report, trendReport, dir) {
-  const images = [
+  const relevance = chartRelevance(report);
+  const charts = [
     // A weekly digest compares with the previous week. Discord shows at most 4 images in a
     // card's grid: matchups, play/draw and the long-term trends stay on the page.
-    { file: 'meta.png', svg: metaTableChart(report, { document, theme }) },
-    { file: 'carte.png', svg: metaMapChart(report, { document, theme }) },
-    { file: 'mouvements.png', svg: moversChart(report, { document, theme }) },
-    { file: 'evolution.png', svg: evolutionChart(trendReport, { document, theme }) },
+    {
+      file: 'meta.png',
+      ok: relevance.meta.ok,
+      render: () => metaTableChart(report, { document, theme }),
+    },
+    {
+      file: 'carte.png',
+      ok: relevance.map.ok,
+      render: () => metaMapChart(report, { document, theme }),
+    },
+    {
+      file: 'mouvements.png',
+      ok: relevance.movers.ok,
+      render: () => moversChart(report, { document, theme }),
+    },
+    {
+      file: 'evolution.png',
+      ok: chartRelevance(trendReport).evolution.ok,
+      render: () => evolutionChart(trendReport, { document, theme }),
+    },
   ];
+  // Only the charts with enough data to say something
+  const images = charts.filter((c) => c.ok).map((c) => ({ file: c.file, svg: c.render() }));
   await mkdir(dir, { recursive: true });
   for (const image of images) {
     await writeFile(path.join(dir, image.file), svgToPng(image.svg));
@@ -62,7 +83,7 @@ async function renderDigest(report, trendReport, dir) {
   const digest = {
     queue: report.queue,
     week: report.week,
-    card: buildDigestCard(report),
+    card: buildDigestCard(report, relevance),
     images: images.map(({ file }) => ({ file })),
   };
   await writeFile(path.join(dir, 'digest.json'), `${JSON.stringify(digest, null, 2)}\n`);
@@ -71,7 +92,7 @@ async function renderDigest(report, trendReport, dir) {
 
 await rm(OUT_DIR, { recursive: true, force: true });
 const lastEnd = lastFinishedWeekEnd();
-// Always written, so the workflow has an artifact to hand over even when nothing was rendered.
+// Always written, so the report workflow's artifact is never empty, even with nothing rendered.
 const summary = { weekEnding: lastEnd, rendered: [], skipped: [] };
 
 for (const format of FORMATS) {
@@ -81,12 +102,15 @@ for (const format of FORMATS) {
   const snapshots = await readAllWeeks(index.queue);
   const label = format.toUpperCase();
 
-  if (args.week && !snapshots.some((s) => s.week.startDate === args.week)) {
-    console.log(`${label}: ${index.queue} has no week ${args.week}, skipped.\n`);
+  // The last finished week (the one in progress is stored too, for the page)
+  const finished = snapshots.filter((s) => s.week.endDate <= lastEnd);
+  const weekStart = args.week ?? finished.at(-1)?.week.startDate;
+  if (!weekStart || !snapshots.some((s) => s.week.startDate === weekStart)) {
+    console.log(`${label}: ${index.queue} has no week ${weekStart ?? 'finished yet'}, skipped.\n`);
     summary.skipped.push({ format, queue: index.queue });
     continue;
   }
-  const report = buildReport({ index, snapshots, weekStart: args.week });
+  const report = buildReport({ index, snapshots, weekStart });
   if (!args.week && !args.queue && report.week.endDate < lastEnd) {
     console.log(
       `${label}: ${index.queue} has no data for the week ending ${lastEnd} (latest: ${report.week.endDate}), skipped.\n`,
@@ -100,12 +124,13 @@ for (const format of FORMATS) {
   const trendReport = buildReport({
     index,
     snapshots,
-    weekStart: args.week,
+    weekStart,
     options: { trendWeeks: config.digestTrendWeeks },
   });
   const digest = await renderDigest(report, trendReport, dir);
   const { title, description } = digest.card;
-  console.log(`${title}\n${description}\n→ ${path.relative(process.cwd(), dir)}/\n`);
+  const files = digest.images.map((image) => image.file).join(', ') || 'no image';
+  console.log(`${title}\n${description}\n→ ${path.relative(process.cwd(), dir)}/ (${files})\n`);
   summary.rendered.push({ format, queue: report.queue, week: report.week.startDate });
 }
 

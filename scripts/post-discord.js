@@ -1,8 +1,8 @@
 // Posts the digests rendered by `npm run digest` to a Discord channel through a webhook:
 // one message per format, BO1 first.
-// Env: DISCORD_WEBHOOK_URL (required). In CI, the workflow also sets SITE_URL to the
-// GitHub Pages address so each message links to the page on its queue; it's empty when Pages
-// is off.
+// Env: DISCORD_WEBHOOK_URL (required). In CI, the Weekly Discord report workflow also sets
+// SITE_URL to the GitHub Pages address so each message links to the page on its queue; it's
+// empty when Pages is off.
 // Usage: npm run post:discord [-- --dry-run]
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -45,6 +45,7 @@ function payloadFor(digest) {
   const { title, description, footer } = digest.card;
   // Embeds sharing the same url are shown by Discord as a single card with a 2×2 image grid.
   const url = page ?? SOURCE_URL;
+  // A card can come without images, when the week had too little data
   const [first, ...others] = digest.images;
   return {
     embeds: [
@@ -54,7 +55,7 @@ function payloadFor(digest) {
         url,
         description: page ? `${description}\n[Graphes interactifs](${page})` : description,
         color: EMBED_COLOR,
-        image: { url: `attachment://${first.file}` },
+        ...(first ? { image: { url: `attachment://${first.file}` } } : {}),
         footer: { text: footer },
       },
       ...others.map((image) => ({ url, image: { url: `attachment://${image.file}` } })),
