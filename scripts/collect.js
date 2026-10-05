@@ -10,7 +10,6 @@ import { readAllWeeks, readWeek, writeIndex, writeWeek } from '../src/lib/store.
 const REQUEST_INTERVAL_MS = 1100;
 
 const queues = process.argv.length > 2 ? process.argv.slice(2) : config.queues;
-const today = new Date().toISOString().slice(0, 10);
 
 async function fetchWithRetry(params, attempts = 3) {
   for (let attempt = 1; ; attempt++) {
@@ -59,12 +58,13 @@ for (const queue of queues) {
   const { data: overview } = await fetchWithRetry({ queue });
   const { meta } = overview;
 
-  // A week is frozen after its last computation (Saturday around 01:30 UTC): only finished
-  // weeks are stored, and they're fetched again if their game count changes later.
-  const complete = (meta.availableWeeks ?? []).filter((w) => w.endDate < today && w.totalGames > 0);
+  // duels.ink recomputes the current week every night (~01:30 UTC) and freezes it after
+  // Saturday's run. Every week is stored, the current one included, and fetched again whenever
+  // its game count changes: daily for the week in progress, rarely afterwards.
+  const weeks = (meta.availableWeeks ?? []).filter((w) => w.totalGames > 0);
 
   let written = 0;
-  for (const week of complete) {
+  for (const week of weeks) {
     const stored = await readWeek(queue, week.startDate);
     if (stored && stored.totalGames === week.totalGames) continue;
 

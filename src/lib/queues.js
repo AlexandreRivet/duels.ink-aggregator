@@ -10,6 +10,11 @@ export function lastFinishedWeekEnd(today = new Date()) {
   return new Date(today.getTime() - daysBack * DAY_MS).toISOString().slice(0, 10);
 }
 
+/** Whether a week is over (its data won't change any more), as opposed to still in progress. */
+export function isWeekComplete(week, today = new Date()) {
+  return week.endDate <= lastFinishedWeekEnd(today);
+}
+
 /**
  * First index, in the given order, whose data covers the last finished week; otherwise the one
  * with the most recent data, so a closed queue never wins over a live one.
