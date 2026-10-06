@@ -75,8 +75,11 @@ single games): win rates are match win rates, and every count is shown as "match
 
 `proxies/` turns a public [dreamborn.ink](https://dreamborn.ink) deck into a PDF to print: paste
 the deck's link, set the copies to print (0 for cards already owned), pick French or English
-images, download. Cards come at their real size (63 × 88 mm), 3 × 3 per A4 page, edge to edge
-with cut marks; print at 100 %, not "fit to page". `?deck=<id>` opens the page on a deck.
+images, download. Cards come at their real size (63 × 88 mm), 3 × 3 per A4 page, edge to edge:
+one cut separates two cards, and a cut a little off the line still lands on their black borders.
+A thin grey guide runs along every card edge, light over the cards, where black borders hide the
+edge, and out to the page's edges to line up a ruler or a paper trimmer. Print at 100 %, not "fit
+to page". `?deck=<id>` opens the page on a deck.
 
 It all runs in the browser. dreamborn has no public deck API, but a public deck's page embeds the
 deck list (card ids and counts) in its Nuxt payload, and both the page and the card images
