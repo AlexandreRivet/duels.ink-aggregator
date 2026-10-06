@@ -15,7 +15,11 @@ export default defineConfig({
     emptyOutDir: true,
     // The homepage, then one page per tool, each in its own folder
     rolldownOptions: {
-      input: { home: page('index.html'), meta: page('meta/index.html') },
+      input: {
+        home: page('index.html'),
+        meta: page('meta/index.html'),
+        proxies: page('proxies/index.html'),
+      },
     },
   },
 });

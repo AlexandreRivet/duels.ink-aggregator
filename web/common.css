@@ -88,6 +88,24 @@ a {
   color: var(--text-2);
 }
 
+/* A labelled control: the label's text, then the control */
+.field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-2);
+}
+
+select,
+input {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+
 /* Visible to screen readers only */
 .sr-only {
   position: absolute;

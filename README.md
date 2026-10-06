@@ -5,12 +5,14 @@ Weekly tracking of the Lorcana meta from the public statistics of
 
 - **collection** every morning into `data/`: finished weeks, to keep the history, and the week
   in progress;
-- **web page** (d3.js), refreshed every morning: meta of the week, trends, matchup matrix. It is
-  the first tool of a small site: the homepage lists the tools, each one in its own folder
-  (`meta/` here);
+- **web page** (d3.js), refreshed every morning: meta of the week, trends, matchup matrix;
 - **Discord digest** posted on Monday morning for the week that just ended, with the same charts
   as images, one message for BO1 and one for BO3, to prepare the team's training session that
   evening.
+
+The page is one tool of a small site whose homepage lists them, each in its own folder: the meta
+page in `meta/`, and a [proxy generator](#proxy-generator) in `proxies/`, which prints a
+dreamborn.ink deck to try it before buying the cards.
 
 The code and docs are in English; the charts, the page and the Discord message are in French,
 for the team. Decks are shown by their two ink chips (coloured-circle emoji in the Discord
@@ -69,6 +71,20 @@ experiment and skill levels are mixed, so read it as an early signal.
 In BO3 queues the API counts decks and matchups in **matches** (and `activity.totalGames` in
 single games): win rates are match win rates, and every count is shown as "matchs".
 
+## Proxy generator
+
+`proxies/` turns a public [dreamborn.ink](https://dreamborn.ink) deck into a PDF to print: paste
+the deck's link, set the copies to print (0 for cards already owned), pick French or English
+images, download. Cards come at their real size (63 × 88 mm), 3 × 3 per A4 page, edge to edge
+with cut marks; print at 100 %, not "fit to page". `?deck=<id>` opens the page on a deck.
+
+It all runs in the browser. dreamborn has no public deck API, but a public deck's page embeds the
+deck list (card ids and counts) in its Nuxt payload, and both the page and the card images
+(`cdn.dreamborn.ink`) are served with `Access-Control-Allow-Origin: *`. That shape isn't a
+contract: if dreamborn changes it, the page says the deck can't be read and
+[src/lib/dreamborn.js](src/lib/dreamborn.js) needs updating. Cards missing in French (often
+promos) are printed in English.
+
 ## Setup
 
 ```bash
@@ -76,7 +92,7 @@ nvm use        # Node 24 (.nvmrc)
 npm install
 
 npm run collect    # first run: backfills every week the API exposes (~40 s)
-npm run dev        # homepage on http://localhost:5173, meta page on /meta/
+npm run dev        # homepage on http://localhost:5173, then /meta/ and /proxies/
 npm run digest     # out/digest/bo1/ and bo3/ (--theme light, --week 2026-09-27, --queue core-bo1)
 ```
 
@@ -132,11 +148,13 @@ webhook from `.env` (see `.env.example`); `-- --dry-run` prints the messages wit
 
 ```
 src/config.js          settings
-src/lib/               API client, storage, computations, formatting, PNG rendering
+src/lib/               API client, storage, computations, formatting, PNG rendering;
+                       dreamborn deck reader and proxy PDF for the proxy generator
 src/charts/            d3 charts (shared by the page and the digest)
 scripts/               collection, digest, Discord posting
 web/                   site (Vite): homepage, common.css shared by every page, one folder per tool
 web/meta/              meta page
+web/proxies/           proxy generator
 data/                  collected data (committed)
 assets/fonts/          Inter (OFL) for PNG rendering
 ```

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Proxies Lorcana</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="page">
+      <header class="page-header">
+        <a class="back-link" href="../">← Tous les outils</a>
+        <h1>Proxies</h1>
+        <p class="subtitle">
+          Les cartes d'un deck dreamborn.ink en PDF, à taille réelle, pour le tester avant d'acheter
+          les cartes.
+        </p>
+      </header>
+
+      <form id="deck-form" class="deck-form">
+        <label class="field deck-link">
+          <span>Lien du deck</span>
+          <input
+            id="deck-link"
+            type="text"
+            inputmode="url"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="https://dreamborn.ink/decks/…"
+            required
+          />
+        </label>
+        <label class="field">
+          <span>Langue des cartes</span>
+          <select id="language">
+            <option value="fr">Français</option>
+            <option value="en">Anglais</option>
+          </select>
+        </label>
+        <button type="submit" class="button">Charger le deck</button>
+      </form>
+
+      <p id="status" class="status" role="status"></p>
+
+      <section id="deck" class="deck" hidden>
+        <div class="deck-bar">
+          <h2><a id="deck-name"></a></h2>
+          <span id="summary" class="summary"></span>
+          <div class="deck-actions">
+            <button type="button" id="select-all" class="button-secondary">Tout le deck</button>
+            <button type="button" id="select-none" class="button-secondary">Aucune carte</button>
+            <button type="button" id="generate" class="button">Télécharger le PDF</button>
+          </div>
+        </div>
+        <p class="hint">
+          Mettre à 0 les cartes déjà possédées : seules les autres sont imprimées. Imprimer le PDF à
+          100 % (taille réelle, sans « ajuster à la page »), puis découper le long des repères.
+        </p>
+        <ul id="cards" class="cards"></ul>
+      </section>
+
+      <footer class="page-footer">
+        Decks et images des cartes : <a href="https://dreamborn.ink">dreamborn.ink</a>. Disney
+        Lorcana © Disney, Ravensburger. Des proxies pour tester des decks, pas pour les tournois.
+      </footer>
+    </main>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
