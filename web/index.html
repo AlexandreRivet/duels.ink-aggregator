@@ -4,45 +4,37 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
-    <title>Méta Lorcana</title>
-    <link rel="stylesheet" href="./style.css" />
+    <title>Outils Lorcana</title>
+    <script>
+      // Links to the meta page from before it moved under meta/ (older Discord digests, bookmarks)
+      // carry its filters in the query string: send them on to it.
+      const params = new URLSearchParams(location.search);
+      if (['queue', 'week', 'matchups', 'deck'].some((name) => params.has(name))) {
+        location.replace(`meta/${location.search}`);
+      }
+    </script>
+    <link rel="stylesheet" href="./home.css" />
   </head>
   <body>
     <main class="page">
       <header class="page-header">
-        <h1>Méta Lorcana</h1>
-        <p id="subtitle" class="subtitle">Chargement des données…</p>
+        <h1>Outils Lorcana</h1>
+        <p class="subtitle">Pour préparer les entraînements de l'équipe.</p>
       </header>
 
-      <form id="filters" class="filters" aria-label="Filtres">
-        <label id="queue-field" class="field" hidden>
-          <span>Queue</span>
-          <select id="queue"></select>
-        </label>
-        <label class="field">
-          <span>Semaine</span>
-          <select id="week"></select>
-        </label>
-        <label class="field">
-          <span>Matchups sur</span>
-          <select id="matchup-weeks">
-            <option value="1">1 semaine</option>
-            <option value="4">4 semaines</option>
-            <option value="8">8 semaines</option>
-          </select>
-        </label>
-      </form>
-
-      <section id="kpis" class="kpis" aria-label="Chiffres clés"></section>
-
-      <section id="charts" class="charts"></section>
-
-      <footer class="page-footer">
-        Données © <a href="https://duels.ink/stats">Duels.ink</a>, agrégées chaque semaine depuis
-        l'API publique <code>/api/stats/meta</code>.
-      </footer>
+      <nav aria-label="Outils">
+        <ul class="tools">
+          <li>
+            <a class="tool" href="meta/">
+              <span class="tool-name">Méta Lorcana</span>
+              <span>
+                Le méta de la semaine sur duels.ink : decks les plus joués, win rates, matchups et
+                tendances, mis à jour chaque matin.
+              </span>
+            </a>
+          </li>
+        </ul>
+      </nav>
     </main>
-    <div id="tooltip" class="tooltip" role="status" hidden></div>
-    <script type="module" src="./main.js"></script>
   </body>
 </html>

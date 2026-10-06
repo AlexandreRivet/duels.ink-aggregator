@@ -1,8 +1,8 @@
 // Posts the digests rendered by `npm run digest` to a Discord channel through a webhook:
 // one message per format, BO1 first.
 // Env: DISCORD_WEBHOOK_URL (required). In CI, the Weekly Discord report workflow also sets
-// SITE_URL to the GitHub Pages address so each message links to the page on its queue; it's
-// empty when Pages is off.
+// SITE_URL to the GitHub Pages address (the site's root) so each message links to the meta page
+// on its queue; it's empty when Pages is off.
 // Usage: npm run post:discord [-- --dry-run]
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -33,13 +33,15 @@ if (!digests.length) {
 }
 
 /**
- * The published page, opened on the digest's queue and week (null when Pages is off). The week
- * matters: the page otherwise opens on the week in progress, not the one the card describes.
+ * The published meta page, opened on the digest's queue and week (null when Pages is off). The
+ * week matters: the page otherwise opens on the week in progress, not the one the card describes.
  */
 function pageLink(digest) {
   // Missing or not a URL (e.g. an API error message): no link rather than a crash
   if (!process.env.SITE_URL || !URL.canParse(process.env.SITE_URL)) return null;
-  const link = new URL(process.env.SITE_URL);
+  // The meta page sits under meta/; the root's trailing slash keeps its last path segment
+  const root = process.env.SITE_URL.replace(/\/?$/, '/');
+  const link = new URL('meta/', root);
   link.searchParams.set('queue', digest.queue);
   link.searchParams.set('week', digest.week.startDate);
   return link.href;

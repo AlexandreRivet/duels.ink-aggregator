@@ -5,7 +5,9 @@ Weekly tracking of the Lorcana meta from the public statistics of
 
 - **collection** every morning into `data/`: finished weeks, to keep the history, and the week
   in progress;
-- **web page** (d3.js), refreshed every morning: meta of the week, trends, matchup matrix;
+- **web page** (d3.js), refreshed every morning: meta of the week, trends, matchup matrix. It is
+  the first tool of a small site: the homepage lists the tools, each one in its own folder
+  (`meta/` here);
 - **Discord digest** posted on Monday morning for the week that just ended, with the same charts
   as images, one message for BO1 and one for BO3, to prepare the team's training session that
   evening.
@@ -22,7 +24,7 @@ text); names remain in tooltips and for screen readers.
 ```
 Daily data aggregation — every day at 06:07 UTC (8:07 / 7:07 in Paris)
   npm run collect    → data/<queue>/weeks/<start>.json   (committed automatically)
-  Website deploy     → npm run build → dist/ → GitHub Pages
+  Website deploy     → npm run build → dist/ (homepage, meta/, data) → GitHub Pages
 
 Weekly Discord report — right after the daily aggregation, on Mondays
   npm run digest     → out/digest/{bo1,bo3}/*.png + digest.json   (last finished week)
@@ -74,7 +76,7 @@ nvm use        # Node 24 (.nvmrc)
 npm install
 
 npm run collect    # first run: backfills every week the API exposes (~40 s)
-npm run dev        # page on http://localhost:5173
+npm run dev        # homepage on http://localhost:5173, meta page on /meta/
 npm run digest     # out/digest/bo1/ and bo3/ (--theme light, --week 2026-09-27, --queue core-bo1)
 ```
 
@@ -133,7 +135,8 @@ src/config.js          settings
 src/lib/               API client, storage, computations, formatting, PNG rendering
 src/charts/            d3 charts (shared by the page and the digest)
 scripts/               collection, digest, Discord posting
-web/                   page (Vite)
+web/                   site (Vite): homepage, common.css shared by every page, one folder per tool
+web/meta/              meta page
 data/                  collected data (committed)
 assets/fonts/          Inter (OFL) for PNG rendering
 ```

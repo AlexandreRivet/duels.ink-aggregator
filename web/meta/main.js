@@ -1,12 +1,12 @@
-import { deckSheetChart } from '../src/charts/deck-sheet.js';
-import { evolutionChart } from '../src/charts/evolution.js';
-import { matchupsChart } from '../src/charts/matchups.js';
-import { metaMapChart } from '../src/charts/meta-map.js';
-import { metaTableChart } from '../src/charts/meta-table.js';
-import { moversChart } from '../src/charts/movers.js';
-import { playDrawChart } from '../src/charts/play-draw.js';
-import { themes } from '../src/charts/theme.js';
-import { config } from '../src/config.js';
+import { deckSheetChart } from '../../src/charts/deck-sheet.js';
+import { evolutionChart } from '../../src/charts/evolution.js';
+import { matchupsChart } from '../../src/charts/matchups.js';
+import { metaMapChart } from '../../src/charts/meta-map.js';
+import { metaTableChart } from '../../src/charts/meta-table.js';
+import { moversChart } from '../../src/charts/movers.js';
+import { playDrawChart } from '../../src/charts/play-draw.js';
+import { themes } from '../../src/charts/theme.js';
+import { config } from '../../src/config.js';
 import {
   formatCount,
   formatDay,
@@ -15,13 +15,15 @@ import {
   formatPct,
   formatUpdatedAt,
   formatWeekRange,
-} from '../src/lib/format.js';
-import { INKS, deckEmoji, deckName } from '../src/lib/inks.js';
-import { buildReport, countsMatches, sampleSize, wilson } from '../src/lib/metrics.js';
-import { isWeekComplete, pickFeaturedQueue } from '../src/lib/queues.js';
-import { chartRelevance } from '../src/lib/relevance.js';
+} from '../../src/lib/format.js';
+import { INKS, deckEmoji, deckName } from '../../src/lib/inks.js';
+import { buildReport, countsMatches, sampleSize, wilson } from '../../src/lib/metrics.js';
+import { isWeekComplete, pickFeaturedQueue } from '../../src/lib/queues.js';
+import { chartRelevance } from '../../src/lib/relevance.js';
 
-const BASE = import.meta.env.BASE_URL;
+// Collected data is served at the site root (publicDir in vite.config.js), one level above this
+// page: relative URLs keep working wherever the site is hosted.
+const DATA_URL = '../';
 const $ = (id) => document.getElementById(id);
 const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
@@ -50,7 +52,7 @@ function loadIndex(queue) {
   if (!indexCache.has(queue)) {
     indexCache.set(
       queue,
-      fetchJson(`${BASE}${queue}/index.json`).catch(() => null),
+      fetchJson(`${DATA_URL}${queue}/index.json`).catch(() => null),
     );
   }
   return indexCache.get(queue);
@@ -64,7 +66,7 @@ function loadQueue(queue) {
         const index = await loadIndex(queue);
         if (!index) throw new Error(`No data for ${queue}`);
         const snapshots = await Promise.all(
-          index.weeks.map((w) => fetchJson(`${BASE}${queue}/weeks/${w.startDate}.json`)),
+          index.weeks.map((w) => fetchJson(`${DATA_URL}${queue}/weeks/${w.startDate}.json`)),
         );
         return { index, snapshots };
       })(),
