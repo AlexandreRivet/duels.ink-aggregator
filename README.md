@@ -62,11 +62,19 @@ that has data for the last finished week and lets you switch to the others. The 
 same per format (BO1, BO3) and skips a format whose queue has no data for the week that just
 ended, so a closed queue never gets its last week posted again.
 
-During a set's beta, put the beta queue first. Right now only the Set 14 betas are collected:
-`quick-play-core-set14` (BO1, featured) and `core-bo3-set14`. When duels.ink closes them at
-release, they stop getting new weeks and their digests stop: put `core-bo1` (and `core-bo3`)
-back at the top of the list then. The BO1 beta is unranked quick play: players
-experiment and skill levels are mixed, so read it as an early signal.
+The ranked queues keep their id from one set to the next (`core-bo1` is "Core Set 14 BO1" since
+Set 14's release), so they are collected as `<queue>@<era>`, with the API's `era` filter: only
+that set's games, stored in `data/<queue>@<era>/`. The release week then holds only the games
+played after the release, rather than a mix of two sets. Era keys are in the API's `meta.eras`;
+an unknown key would silently give the current era, so the collector rejects it.
+
+Right now: `core-bo1@set-14-core` and `core-bo3@set-14-core` first, then the closed Set 14
+betas, `quick-play-core-set14` and `core-bo3-set14`, kept for the page (they get no new weeks,
+so the digest never picks them again). At a new set: put its betas first during the beta, then
+`core-bo1@<new era>` and `core-bo3@<new era>` at release. A closed queue keeps the eras it had
+while open, since the API then answers with its format's eras, and a ranked queue kept to an
+earlier set keeps that set's name. The betas are unranked quick play: players experiment and
+skill levels are mixed, so read them as an early signal.
 
 In BO3 queues the API counts decks and matchups in **matches** (and `activity.totalGames` in
 single games): win rates are match win rates, and every count is shown as "matchs".

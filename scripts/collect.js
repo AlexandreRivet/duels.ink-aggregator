@@ -1,11 +1,11 @@
 // Stores every duels.ink week in data/<queue>/weeks/, the one in progress included.
 // On the first run, backfills every week the API still exposes. A queue that fails doesn't stop
 // the others; the run only fails when no queue could be collected.
-// Usage: npm run collect [-- queue …]
+// Usage: npm run collect [-- queue …]   (a queue id, or <queue>@<era> for one set's games only)
 import { setTimeout as sleep } from 'node:timers/promises';
 import { config } from '../src/config.js';
 import { fetchMeta } from '../src/lib/duels-api.js';
-import { readAllWeeks, readWeek, writeIndex, writeWeek } from '../src/lib/store.js';
+import { readAllWeeks, readIndex, readWeek, writeIndex, writeWeek } from '../src/lib/store.js';
 
 // 60 requests / 60 s per IP: stay below it.
 const REQUEST_INTERVAL_MS = 1100;
@@ -57,10 +57,16 @@ function toSnapshot(queue, week, { data, etag }) {
   };
 }
 
-async function collectQueue(queue) {
-  console.log(`▸ ${queue}`);
-  const { data: overview } = await fetchWithRetry({ queue });
+async function collectQueue(id) {
+  // <queue>@<era>: that set's games only, stored under the whole id
+  const [queue, era] = id.split('@');
+  console.log(`▸ ${id}`);
+  const { data: overview } = await fetchWithRetry({ queue, era });
   const { meta } = overview;
+  // An unknown era key silently falls back to the current one
+  if (era && meta.selectedEraKey !== era) {
+    throw new Error(`Unknown era ${era} (got ${meta.selectedEraKey})`);
+  }
 
   // duels.ink recomputes the current week every night (~01:30 UTC) and freezes it after
   // Saturday's run. Every week is stored, the current one included, and fetched again whenever
@@ -69,27 +75,32 @@ async function collectQueue(queue) {
 
   let written = 0;
   for (const week of weeks) {
-    const stored = await readWeek(queue, week.startDate);
+    const stored = await readWeek(id, week.startDate);
     if (stored && stored.totalGames === week.totalGames) continue;
 
     await sleep(REQUEST_INTERVAL_MS);
     const res = await fetchWithRetry({
       queue,
+      era,
       period: `week:${week.startDate}`,
       etag: stored?.etag,
     });
     if (res.status === 304) continue;
-    if (res.data.meta.period !== `week:${week.startDate}`) {
-      throw new Error(`Unexpected response for ${week.startDate}: ${res.data.meta.period}`);
+    // With an era, meta.period is an opaque id: selectedEraKey tells the scope instead
+    const scope = era ? res.data.meta.selectedEraKey : res.data.meta.period;
+    if (scope !== (era ?? `week:${week.startDate}`)) {
+      throw new Error(`Unexpected response for ${week.startDate}: ${scope}`);
     }
 
-    await writeWeek(queue, toSnapshot(queue, week, res));
+    await writeWeek(id, toSnapshot(id, week, res));
     written++;
     console.log(`  ${week.startDate}  ${res.data.activity.totalGames} games`);
   }
 
-  const snapshots = await readAllWeeks(queue);
+  const snapshots = await readAllWeeks(id);
+  const previous = await readIndex(id);
   // A closed beta queue moves from the active list to the archived one.
+  const open = meta.queues?.active?.some((q) => q.id === queue) ?? true;
   const info = [...(meta.queues?.active ?? []), ...(meta.queues?.archived ?? [])].find(
     (q) => q.id === queue,
   );
@@ -103,12 +114,21 @@ async function collectQueue(queue) {
     }))
     .sort((a, b) => a.startedAt.localeCompare(b.startedAt));
 
-  await writeIndex(queue, {
-    queue,
-    queueName: info?.name ?? queue,
+  // duels.ink names a ranked queue after the current set ("Core Set 14 BO1"): a queue kept to an
+  // earlier set keeps the name it had while that set was the current one.
+  const named = !era || meta.eras?.currentEra?.key === era;
+  const queueName = (named ? info?.name : previous?.queueName) ?? id;
+
+  await writeIndex(id, {
+    queue: id,
+    queueName,
     // bo1 | bo3: in BO3 queues, decks and matchups are counted in matches.
     gameMode: info?.gameMode ?? null,
-    eras,
+    // The set the queue is kept to (<queue>@<era>), or null for its whole lifetime
+    era: eras.find((e) => e.key === era) ?? null,
+    // Once closed, a queue keeps the eras it had while open: the API then answers with its
+    // format's eras, set releases a beta never played through.
+    eras: open || !previous ? eras : previous.eras,
     weeks: snapshots.map((s) => ({
       ...s.week,
       totalGames: s.totalGames,

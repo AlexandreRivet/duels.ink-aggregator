@@ -316,8 +316,12 @@ export function buildReport({ index, snapshots, weekStart, options = {}, today =
       };
     });
 
-  const eras = [...(index.eras ?? [])].sort((a, b) => a.startedAt.localeCompare(b.startedAt));
-  const era = eraAt(eras, target.week.endDate);
+  // A queue kept to one set (index.era) only holds its games, release week included: no
+  // earlier set to mark on the trend or to leave out of the matchups.
+  const eras = index.era
+    ? []
+    : [...(index.eras ?? [])].sort((a, b) => a.startedAt.localeCompare(b.startedAt));
+  const era = index.era ?? eraAt(eras, target.week.endDate);
   const eraMarkers = eras
     .filter((e) => e.startedAt.slice(0, 10) > trendStarts[0])
     .filter((e) => e.startedAt.slice(0, 10) <= target.week.endDate)

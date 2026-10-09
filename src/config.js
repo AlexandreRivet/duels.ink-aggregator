@@ -7,9 +7,17 @@ export const config = {
    * and the page feature the first one with data for the last finished week. During a set's
    * beta, list the beta queue first; once duels.ink closes it, it stops getting new weeks and
    * the next queue takes over.
+   *
+   * `<queue>@<era>` keeps only one set's games (era keys from meta.eras): the ranked queues keep
+   * their id from one set to the next, and a release week would otherwise mix two sets.
    */
-  // Set 14 betas only for now: put core-bo1 back (first) when Set 14 is released.
-  queues: ['quick-play-core-set14', 'core-bo3-set14'],
+  queues: [
+    'core-bo1@set-14-core',
+    'core-bo3@set-14-core',
+    // Set 14 betas, closed at release: kept for the page
+    'quick-play-core-set14',
+    'core-bo3-set14',
+  ],
 
   /**
    * Decks shown everywhere — every chart, table, the deck picker and the Discord summary: the
