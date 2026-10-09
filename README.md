@@ -24,7 +24,7 @@ text); names remain in tooltips and for screen readers.
 ## How it works
 
 ```
-Daily data aggregation — every day at 06:07 UTC (8:07 / 7:07 in Paris)
+Daily data aggregation — every day at 4:30 in Paris (02:30 / 03:30 UTC)
   npm run collect    → data/<queue>/weeks/<start>.json   (committed automatically)
   Website deploy     → npm run build → dist/ (homepage, meta/, data) → GitHub Pages
 
