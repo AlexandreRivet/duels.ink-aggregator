@@ -6,9 +6,10 @@ Weekly tracking of the Lorcana meta from the public statistics of
 - **collection** every morning into `data/`: finished weeks, to keep the history, and the week
   in progress;
 - **web page** (d3.js), refreshed every morning: meta of the week, trends, matchup matrix;
-- **Discord digest** posted on Monday morning for the week that just ended, with the same charts
-  as images, one message for BO1 and one for BO3, to prepare the team's training session that
-  evening.
+- **Discord digest** posted on Sunday morning for the week that just ended, with the same charts
+  as images, one message for BO1 and one for BO3, to prepare the team's training sessions;
+- **podcast**, posted with it: Camille and Sacha comment the week in about five minutes (script
+  by Claude, voices by OpenAI text-to-speech), each episode also kept on the site.
 
 The page is one tool of a small site whose homepage lists them, each in its own folder: the meta
 page in `meta/`, a [proxy generator](#proxy-generator) in `proxies/`, which prints a
@@ -30,10 +31,17 @@ Daily data aggregation — every day at 4:30 in Paris (02:30 / 03:30 UTC)
   npm run collect    → data/<queue>/weeks/<start>.json   (committed automatically)
   Website deploy     → npm run build → dist/ (homepage, meta/, data) → GitHub Pages
 
-Weekly Discord report — right after the daily aggregation, on Mondays
-  npm run digest     → out/digest/{bo1,bo3}/*.png + digest.json   (last finished week)
-  post-discord.js    → one compact card per format (BO1, then BO3), charts in a 2×2 grid
+Weekly Discord report — right after the daily aggregation, on Sundays
+  npm run digest          → out/digest/{bo1,bo3}/*.png + digest.json + facts.json   (last finished week)
+  npm run podcast:script  → out/podcast/script.json   (Claude; every figure checked against facts.json)
+  npm run podcast:audio   → data/episodes/<start>/episode.mp3 + script.json   (committed automatically)
+  Website deploy          → the new episode on the site, before Discord links to it
+  post-discord.js         → two messages: the episode, its MP3 attached; then the charts, one
+                            compact card per format (BO1, then BO3), each in a 2×2 grid
 ```
+
+The podcast steps may fail (an API down, a script whose figures aren't all in the data): the
+charts still go out, without an episode.
 
 Every push to `main` (a merged pull request included) also rebuilds and redeploys the page
 ([website-deploy.yml](.github/workflows/website-deploy.yml)), the same workflow the daily
@@ -114,14 +122,19 @@ npm run digest     # out/digest/bo1/ and bo3/ (--theme light, --week 2026-09-27,
 1. In Discord: channel settings → Integrations → Webhooks → New Webhook → copy the URL.
 2. Store it as a repository secret: `gh secret set DISCORD_WEBHOOK_URL` (or **Settings →
    Secrets and variables → Actions**).
-3. Optional: **Settings → Pages → Source: GitHub Actions** to publish the page. On a private
+3. For the podcast, store the API keys the same way: `gh secret set ANTHROPIC_API_KEY` and
+   `gh secret set OPENAI_API_KEY`. Without them the podcast steps fail and the charts go out
+   alone.
+4. Optional: **Settings → Pages → Source: GitHub Actions** to publish the page. On a private
    repo this needs GitHub Pro, and the published site is public. Without Pages, the deploy job
    fails but the Discord message still goes out, without a link.
-4. **Actions → Weekly Discord report → Run workflow** to test (tick "Post the digest to Discord" to
-   send the message).
+5. **Actions → Weekly Discord report → Run workflow** to test: the episode then stays in the
+   run's artifact; tick "Post to Discord and publish the podcast episode" to send the messages
+   and commit the episode.
 
-Both workflows then run on their own: the aggregation every morning, the report on Mondays. Locally, `npm run post:discord` reads the
-webhook from `.env` (see `.env.example`); `-- --dry-run` prints the messages without sending them.
+Both workflows then run on their own: the aggregation every morning, the report on Sundays.
+Locally, `npm run post:discord` reads the webhook from `.env` (see `.env.example`);
+`-- --dry-run` prints the messages without sending them.
 
 ## Scripts
 

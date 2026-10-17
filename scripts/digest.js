@@ -2,7 +2,7 @@
 // format's featured queue (see config.queues), with its images, Discord message and the
 // podcast's facts.
 // The digest covers the last finished week, never the one in progress. A format whose queue has
-// no data for it is skipped, so a closed beta queue isn't posted again every Monday. Charts
+// no data for it is skipped, so a closed beta queue isn't posted again every Sunday. Charts
 // without enough data are left out; with none, the card is text only.
 // Usage: npm run digest [-- --week 2026-09-27] [-- --queue core-bo1] [-- --theme light]
 import { mkdir, rm, writeFile } from 'node:fs/promises';

@@ -1,17 +1,19 @@
 name: Weekly Discord report
 
 on:
-  # Right after the daily aggregation, so the report uses that morning's data; Mondays only.
+  # Right after the daily aggregation, so the report uses that morning's data; Sundays only, the
+  # morning after the duels.ink week (Sunday–Saturday, UTC) ends: duels.ink recomputes around
+  # 01:30 UTC, the aggregation runs at 4:30 in Paris (02:30 / 03:30 UTC).
   # Whatever the aggregation's outcome: the finished week it reports on was stored by an earlier
   # run, and the digest skips a format with no data for it. A failed deploy (Pages off or down)
-  # or a failed Monday collection no longer cancels the report.
+  # or a failed Sunday collection no longer cancels the report.
   workflow_run:
     workflows: [Daily data aggregation]
     types: [completed]
   workflow_dispatch:
     inputs:
       post:
-        description: Post the digest to Discord
+        description: Post to Discord and publish the podcast episode
         type: boolean
         default: false
 
@@ -35,20 +37,27 @@ jobs:
           AGGREGATION: ${{ github.event.workflow_run.conclusion }}
         run: |
           if [ "$EVENT" = workflow_run ]; then echo "Daily aggregation: $AGGREGATION"; fi
-          if [ "$EVENT" = workflow_dispatch ] || [ "$(date -u +%u)" = 1 ]; then
+          if [ "$EVENT" = workflow_dispatch ] || [ "$(date -u +%u)" = 7 ]; then
             echo "go=true" >> "$GITHUB_OUTPUT"
           else
             echo "go=false" >> "$GITHUB_OUTPUT"
-            echo "Not Monday: no report today"
+            echo "Not Sunday: no report today"
           fi
 
+  # Charts, then the podcast. The podcast steps may fail (an API down, a script with figures
+  # that aren't in the data): the charts still go out, without an episode.
   report:
     needs: gate
     if: needs.gate.outputs.go == 'true'
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      pages: read
+      # To commit the episode into data/episodes/
+      contents: write
+    outputs:
+      episode: ${{ steps.commit.outputs.committed }}
+    env:
+      # Scheduled runs publish; manual ones only when asked
+      PUBLISH: ${{ github.event_name == 'workflow_run' || inputs.post }}
     steps:
       # The default branch's latest commit: it includes this morning's data commit
       - uses: actions/checkout@v5
@@ -61,11 +70,88 @@ jobs:
       - name: Render the digest images
         run: npm run digest
 
+      - name: Write the podcast script
+        id: script
+        continue-on-error: true
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: npm run podcast:script
+
+      - name: Install ffmpeg
+        if: steps.script.outcome == 'success'
+        run: command -v ffmpeg || (sudo apt-get update -q && sudo apt-get install -yq --no-install-recommends ffmpeg)
+
+      - name: Record the podcast
+        id: audio
+        if: steps.script.outcome == 'success'
+        continue-on-error: true
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        # A manual run that doesn't publish keeps the episode in the artifact only
+        run: |
+          if [ "$PUBLISH" = true ]; then npm run podcast:audio; else npm run podcast:audio -- --no-store; fi
+
+      - name: Commit the episode
+        id: commit
+        if: steps.audio.outcome == 'success' && env.PUBLISH == 'true'
+        run: |
+          git add data/episodes
+          if git diff --cached --quiet; then
+            echo "No episode this week"
+            echo "committed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m "podcast: episode ($(jq -r .week.startDate out/podcast/script.json))"
+          # Another commit may have landed meanwhile (a data commit, a merge)
+          git pull --rebase
+          git push
+          echo "committed=true" >> "$GITHUB_OUTPUT"
+
+      # A failed or unpublished episode leaves no audio for the Discord message
+      - name: Keep the episode out of the message
+        if: steps.audio.outcome != 'success'
+        run: rm -f out/podcast/episode.mp3
+
+      # All of out/ (digest/, podcast/ when there's an episode): with a list of paths, the
+      # artifact's root would move to out/digest/ whenever out/podcast/ is missing
       - uses: actions/upload-artifact@v4
         with:
           name: digest
-          path: out/digest
+          path: out
           retention-days: 30
+
+  # The new episode on the site before Discord links to it. A push made with the workflow token
+  # doesn't trigger Website deploy by itself: call it.
+  website:
+    needs: report
+    if: needs.report.outputs.episode == 'true'
+    uses: ./.github/workflows/website-deploy.yml
+    with:
+      ref: ${{ github.event.repository.default_branch }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+  post:
+    needs: [report, website]
+    # Also when the site wasn't redeployed (no episode) or the deploy failed (Pages off)
+    if: always() && needs.report.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/download-artifact@v4
+        with:
+          name: digest
+          path: out
 
       - name: Find the page's address
         id: site

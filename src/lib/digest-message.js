@@ -1,5 +1,5 @@
 /**
- * Content of the Discord card posted with the Monday charts (in French, for the team).
+ * Content of the Discord card posted with the Sunday charts (in French, for the team).
  * Decks appear as their inks in coloured-circle emoji, like the chips in the charts.
  * Kept short on purpose: the charts carry the detail (intervals, counts, matchups).
  */
