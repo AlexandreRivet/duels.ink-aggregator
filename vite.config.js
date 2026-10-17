@@ -19,6 +19,8 @@ export default defineConfig({
         home: page('index.html'),
         meta: page('meta/index.html'),
         proxies: page('proxies/index.html'),
+        podcast: page('podcast/index.html'),
+        episode: page('podcast/episode/index.html'),
       },
     },
   },

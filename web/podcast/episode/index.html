@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Épisode · Podcast Lorcana</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <main class="page narrow episode-page">
+      <header class="page-header">
+        <a class="back-link" href="../">← Tous les épisodes</a>
+        <h1 id="title">Podcast</h1>
+        <p id="details" class="subtitle"></p>
+      </header>
+
+      <p id="status" class="status" role="status">Chargement de l’épisode…</p>
+
+      <article id="episode" hidden>
+        <p id="summary" class="episode-summary"></p>
+        <div id="links" class="episode-links"></div>
+
+        <section class="transcript-card" aria-labelledby="transcript-title">
+          <h2 id="transcript-title" class="sr-only">Transcription</h2>
+          <ol id="transcript" class="transcript"></ol>
+          <div class="player">
+            <audio id="audio" controls preload="metadata"></audio>
+            <button id="resume-follow" class="resume-follow" type="button" hidden>
+              Suivre la lecture
+            </button>
+            <span class="player-hint">Cliquer sur une réplique pour l’écouter.</span>
+          </div>
+        </section>
+
+        <nav id="siblings" class="episode-links siblings" aria-label="Autres épisodes"></nav>
+      </article>
+
+      <footer class="page-footer">
+        Épisode généré automatiquement à partir des statistiques publiques de
+        <a href="https://duels.ink/stats">duels.ink</a> : script écrit par Claude, voix synthétisées
+        par OpenAI.
+      </footer>
+    </main>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

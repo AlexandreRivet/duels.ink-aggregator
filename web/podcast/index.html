@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Podcast Lorcana</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="page narrow">
+      <header class="page-header">
+        <a class="back-link" href="../">← Tous les outils</a>
+        <h1>Podcast</h1>
+        <p class="subtitle">
+          Chaque dimanche, Camille et Sacha commentent la méta de la semaine sur duels.ink.
+        </p>
+      </header>
+
+      <p id="status" class="status" role="status">Chargement des épisodes…</p>
+      <ol id="episodes" class="episodes" hidden></ol>
+
+      <footer class="page-footer">
+        Épisodes générés automatiquement à partir des statistiques publiques de
+        <a href="https://duels.ink/stats">duels.ink</a> : script écrit par Claude, voix synthétisées
+        par OpenAI.
+      </footer>
+    </main>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

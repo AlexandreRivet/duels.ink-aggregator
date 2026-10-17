@@ -1,0 +1,284 @@
+@import '../common.css';
+
+/* The hosts' colours: Camille's Ruby, Sacha's Sapphire (the ink chips' colours, softened) */
+:root {
+  --camille: #c4153a;
+  --sacha: #0b7cb3;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --camille: #f0556f;
+    --sacha: #4bb3e6;
+  }
+}
+
+/* Reading width: a list and a conversation, not a dashboard */
+.narrow {
+  max-width: 860px;
+}
+
+.status {
+  min-height: 1.5em;
+  margin: 24px 0;
+  color: var(--text-2);
+}
+
+.button {
+  display: inline-block;
+  font: inherit;
+  font-weight: 500;
+  color: #ffffff;
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 6px 14px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.meta-link {
+  display: inline-block;
+  padding: 6px 12px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.meta-link:hover,
+.meta-link:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ---- Playlist ---- */
+
+.episodes {
+  display: grid;
+  gap: 16px;
+  margin: 32px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.episode {
+  padding: 20px 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.episode-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.episode-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.episode-title a {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.episode-title a:hover,
+.episode-title a:focus-visible {
+  color: var(--accent);
+}
+
+.episode-details {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.episode-summary {
+  margin: 10px 0 16px;
+  color: var(--text-2);
+}
+
+.episode-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ---- Episode ---- */
+
+.episode-page .episode-links {
+  margin-top: 16px;
+}
+
+.episode-page .siblings {
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+.transcript-card {
+  margin-top: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  /* clip, not hidden: hidden would make the card a scroll container, and the player stick to it */
+  overflow: clip;
+}
+
+.transcript {
+  position: relative;
+  height: min(60vh, 560px);
+  margin: 0;
+  padding: 24px 20px;
+  overflow-y: auto;
+  list-style: none;
+  scroll-padding: 24px;
+}
+
+.line {
+  display: flex;
+  margin: 0 0 12px;
+}
+
+.line.sacha {
+  justify-content: flex-end;
+}
+
+.bubble {
+  --host: var(--camille);
+  display: block;
+  max-width: min(78%, 560px);
+  padding: 10px 14px;
+  font: inherit;
+  text-align: left;
+  color: var(--text);
+  background: color-mix(in srgb, var(--host) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--host) 18%, transparent);
+  border-radius: 14px 14px 14px 4px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition:
+    opacity 0.25s,
+    background-color 0.25s,
+    border-color 0.25s,
+    box-shadow 0.25s;
+}
+
+.sacha .bubble {
+  --host: var(--sacha);
+  border-radius: 14px 14px 4px 14px;
+}
+
+.bubble:hover,
+.bubble:focus-visible {
+  opacity: 1;
+}
+
+.bubble:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Lines already heard stay readable; the one being heard stands out */
+.line.heard .bubble {
+  opacity: 0.85;
+}
+
+.line.current .bubble {
+  opacity: 1;
+  background: color-mix(in srgb, var(--host) 16%, var(--surface));
+  border-color: var(--host);
+  box-shadow: 0 0 0 1px var(--host);
+}
+
+.speaker {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 2px;
+  color: var(--host);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.timestamp {
+  color: var(--muted);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.line-text {
+  display: block;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.player {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 12px 20px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+
+.player audio {
+  flex: 1 1 320px;
+  width: 100%;
+  min-width: 0;
+}
+
+.player-hint {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.resume-follow {
+  font: inherit;
+  font-size: 13px;
+  color: var(--accent);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bubble {
+    transition: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .episode {
+    padding: 16px;
+  }
+
+  .transcript {
+    padding: 16px 12px;
+  }
+
+  .bubble {
+    max-width: 88%;
+  }
+}

@@ -11,8 +11,10 @@ Weekly tracking of the Lorcana meta from the public statistics of
   evening.
 
 The page is one tool of a small site whose homepage lists them, each in its own folder: the meta
-page in `meta/`, and a [proxy generator](#proxy-generator) in `proxies/`, which prints a
-dreamborn.ink deck to try it before buying the cards.
+page in `meta/`, a [proxy generator](#proxy-generator) in `proxies/`, which prints a
+dreamborn.ink deck to try it before buying the cards, and the weekly podcast in `podcast/`: the
+episodes, each with its transcript scrolling along with the audio and links to the meta page on
+the week it covers.
 
 The code and docs are in English; the charts, the page and the Discord message are in French,
 for the team. Decks are shown by their two ink chips (coloured-circle emoji in the Discord
@@ -168,6 +170,7 @@ scripts/               collection, digest, podcast script and audio, Discord pos
 web/                   site (Vite): homepage, common.css shared by every page, one folder per tool
 web/meta/              meta page
 web/proxies/           proxy generator
-data/                  collected data (committed)
+web/podcast/           podcast playlist; episode/ plays one, its transcript following the audio
+data/                  collected data and podcast episodes (committed)
 assets/fonts/          Inter (OFL) for PNG rendering
 ```
