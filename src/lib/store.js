@@ -3,8 +3,10 @@
  *
  * data/<queue>/index.json         available weeks, eras, queue name
  * data/<queue>/weeks/<start>.json  snapshot of a finished week (stable fields only)
+ * data/episodes/index.json         podcast episodes, newest first
+ * data/episodes/<start>/           an episode's script.json and episode.mp3
  */
-import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -48,4 +50,39 @@ export async function readAllWeeks(queue) {
   }
   const names = files.filter((f) => f.endsWith('.json')).sort();
   return Promise.all(names.map((f) => readJson(path.join(weeksDir(queue), f))));
+}
+
+const EPISODES_DIR = path.join(DATA_DIR, 'episodes');
+
+/**
+ * Stores a podcast episode under data/episodes/<start>/ and lists it in the index, replacing
+ * the week's earlier episode if any. Paths in the index are relative to data/episodes/, as the
+ * site serves it.
+ *
+ * @param {object} script out/podcast/script.json
+ * @param {string} audioFile the episode's MP3
+ * @param {object} details { duration (seconds), voiceModel }
+ */
+export async function writeEpisode(script, audioFile, details) {
+  const { startDate } = script.week;
+  const dir = path.join(EPISODES_DIR, startDate);
+  await writeJson(path.join(dir, 'script.json'), script, { pretty: true });
+  await copyFile(audioFile, path.join(dir, 'episode.mp3'));
+
+  const indexFile = path.join(EPISODES_DIR, 'index.json');
+  const index = (await readJson(indexFile)) ?? { episodes: [] };
+  const episode = {
+    week: script.week,
+    title: script.title,
+    summary: script.summary,
+    duration: Math.round(details.duration),
+    audio: `${startDate}/episode.mp3`,
+    script: `${startDate}/script.json`,
+    scriptModel: script.model,
+    voiceModel: details.voiceModel,
+  };
+  const episodes = [episode, ...index.episodes.filter((e) => e.week.startDate !== startDate)];
+  episodes.sort((a, b) => b.week.startDate.localeCompare(a.week.startDate));
+  await writeJson(indexFile, { episodes }, { pretty: true });
+  return path.relative(process.cwd(), dir);
 }

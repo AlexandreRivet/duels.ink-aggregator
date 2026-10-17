@@ -2,7 +2,7 @@
 // out/digest/<format>/facts.json, into out/podcast/ (script.json for the audio step, script.md to
 // read). Every percentage the script says is checked against the facts; one rewrite is asked
 // when some aren't there, then the run fails rather than airing made-up figures.
-// Env: ANTHROPIC_API_KEY (required), PODCAST_MODEL (default claude-opus-5-5).
+// Env: ANTHROPIC_API_KEY (required), PODCAST_MODEL (default claude-sonnet-5-5).
 // Usage: npm run podcast:script [-- --dry-run]
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -22,7 +22,7 @@ import {
 
 const DIGEST_DIR = fileURLToPath(new URL('../out/digest/', import.meta.url));
 export const OUT_DIR = fileURLToPath(new URL('../out/podcast/', import.meta.url));
-const MODEL = process.env.PODCAST_MODEL || 'claude-opus-5-5';
+const MODEL = process.env.PODCAST_MODEL || 'claude-sonnet-5-5';
 
 const { values: args } = parseArgs({
   options: { 'dry-run': { type: 'boolean', default: false } },

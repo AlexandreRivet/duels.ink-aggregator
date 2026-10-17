@@ -1,0 +1,151 @@
+{
+  "week": {
+    "startDate": "2026-10-04",
+    "endDate": "2026-10-10"
+  },
+  "model": "claude-sonnet-5-5",
+  "title": "Set 14, premier cliché : Émeraude-Acier contre la pièce",
+  "summary": "Première semaine du Set 14 sur duels.ink : Ambre-Émeraude domine en nombre, Émeraude-Acier affiche le meilleur taux de victoire, et le premier joueur pèse très lourd en best-of-one. Camille et Sacha se disputent sur ce que les chiffres permettent vraiment de dire.",
+  "lines": [
+    {
+      "speaker": "camille",
+      "text": "Bonjour à toutes et à tous, on est dimanche, et on regarde la semaine du 4 au 10 octobre. Une meta toute neuve, le Set 14, et déjà de quoi s'écharper."
+    },
+    {
+      "speaker": "sacha",
+      "text": "Précision de rabat-joie, dès l'ouverture : c'est la première semaine de chiffres, dans les deux formats. Aucune semaine précédente comparable, donc aucune évolution à commenter. C'est une photo, pas un film."
+    },
+    {
+      "speaker": "camille",
+      "text": "Une photo bien nette, quand même. Best-of-one d'abord, plus de 32 000 parties. Ambre-Émeraude est le deck le plus joué, 20,6 %. Concrètement, une partie sur cinq, en face, tu croises ça."
+    },
+    {
+      "speaker": "sacha",
+      "text": "Et il gagne 53,5 %, donc au-dessus de 50 %, sans discussion. Mais le meilleur taux de victoire, c'est Émeraude-Acier, 55 %, pour seulement 12 % de présence."
+    },
+    {
+      "speaker": "camille",
+      "text": "Voilà, le deck à lancer ce soir. Émeraude-Acier, point final."
+    },
+    {
+      "speaker": "sacha",
+      "text": "Point final, c'est vite dit. 55 contre 53,5, les marges d'erreur des deux decks se chevauchent. Je peux affirmer que les deux sont au-dessus de 50 %. Je ne peux pas affirmer que l'un bat l'autre."
+    },
+    {
+      "speaker": "camille",
+      "text": "Tu es pénible. Tout le monde sait que 55, c'est mieux que 53,5."
+    },
+    {
+      "speaker": "sacha",
+      "text": "Sur cet échantillon, tout le monde sait surtout que ça se peut. Je ne parierais pas mon rang dessus, c'est tout."
+    },
+    {
+      "speaker": "camille",
+      "text": "Alors regarde plutôt ça : celui qui commence gagne 56,7 % des parties. Le ladder, c'est pile ou face avec des cartes."
+    },
+    {
+      "speaker": "sacha",
+      "text": "Et c'est là que les chiffres deviennent drôles. Ambre-Émeraude fait 60,2 % quand il commence, mais 48 % quand il est second. Émeraude-Acier passe de 62,9 % à 47,9 %. Son joli 55 %, il le doit en bonne partie à la pièce."
+    },
+    {
+      "speaker": "camille",
+      "text": "Donc au ladder, on prie pour la pièce. Je note."
+    },
+    {
+      "speaker": "sacha",
+      "text": "Gardons ça en tête pour le best-of-three, ça va servir."
+    },
+    {
+      "speaker": "camille",
+      "text": "Et maintenant, le moment douloureux. Ambre-Rubis, 6,5 % de jeu, 44,9 % de victoire, nettement en dessous de 50 %. Oui, c'est mon Rubis, et oui, ça pique."
+    },
+    {
+      "speaker": "sacha",
+      "text": "Je n'ai rien dit."
+    },
+    {
+      "speaker": "camille",
+      "text": "Tu as pensé très fort. Dans les matchups, Émeraude-Acier lui met 66,7 % sur 471 parties."
+    },
+    {
+      "speaker": "sacha",
+      "text": "Et Ambre-Émeraude lui prend 59,8 % sur 833 parties. Ce sont de gros échantillons, ces écarts sont solides. Hypothèse : le Rubis se retrouve coincé face aux deux decks les plus présents."
+    },
+    {
+      "speaker": "camille",
+      "text": "Ou alors le ladder n'a pas encore appris à le jouer. Je maintiens ma version."
+    },
+    {
+      "speaker": "sacha",
+      "text": "Tu as le droit. Elle n'est juste pas dans les chiffres."
+    },
+    {
+      "speaker": "camille",
+      "text": "Passons au best-of-three. Plus de 8 000 matchs, et Ambre-Émeraude reste en tête avec 20,6 %, exactement le même taux de jeu qu'en best-of-one."
+    },
+    {
+      "speaker": "sacha",
+      "text": "Il gagne 56,7 %, et Émeraude-Acier 57,9 %. Même histoire qu'en best-of-one, avec le même chevauchement. Ça tient donc dans les deux formats : deux decks au-dessus de 50 %, impossibles à départager."
+    },
+    {
+      "speaker": "camille",
+      "text": "Tu vois, Émeraude-Acier est devant dans les deux !"
+    },
+    {
+      "speaker": "sacha",
+      "text": "Devant de peu, dans les deux. Je te le concède : la régularité entre formats, c'est un point pour toi. Mais pas une preuve."
+    },
+    {
+      "speaker": "camille",
+      "text": "Je prends le point. Et le premier joueur ?"
+    },
+    {
+      "speaker": "sacha",
+      "text": "Il tombe à 53,2 %, contre 56,7 % en best-of-one. Et regarde Émeraude-Acier : 60,7 % quand il commence, 56,1 % quand il est second, un écart de 4,6 points, contre 15 en best-of-one. Là, il gagne vraiment, même à la pioche."
+    },
+    {
+      "speaker": "camille",
+      "text": "Donc mon Émeraude-Acier de ce soir est plus solide que je le pensais, c'est ça ?"
+    },
+    {
+      "speaker": "sacha",
+      "text": "Ton Émeraude-Acier, oui. Ambre-Émeraude garde un écart de 8,2 points entre commencer et être second, donc il dépend plus de la pièce."
+    },
+    {
+      "speaker": "camille",
+      "text": "Et le Rubis ?"
+    },
+    {
+      "speaker": "sacha",
+      "text": "Ambre-Rubis tombe à 40,8 %, encore plus bas qu'en best-of-one. Émeraude-Saphir aussi, 43,7 % contre 48,1 %. Les decks faibles le sont encore davantage sur trois manches."
+    },
+    {
+      "speaker": "camille",
+      "text": "Aïe. Les matchups en best-of-three, ils disent quoi ?"
+    },
+    {
+      "speaker": "sacha",
+      "text": "Rien, et je préfère le dire. Un tiers seulement des cases dépasse 100 matchs. Je ne commente pas des tableaux percés."
+    },
+    {
+      "speaker": "camille",
+      "text": "Un détail qui m'a fait sourire : Améthyste-Acier, près de 10 % de jeu, et 49,4 % de victoire."
+    },
+    {
+      "speaker": "sacha",
+      "text": "Pas distinguable de 50 %. Très joué, ni bon ni mauvais. C'est le deck le plus honnête de la semaine."
+    },
+    {
+      "speaker": "camille",
+      "text": "Allez, ce que je surveille la semaine prochaine : est-ce que le ladder bascule d'Ambre-Émeraude vers Émeraude-Acier, et si le Rubis relève la tête. Moi, je parie sur oui."
+    },
+    {
+      "speaker": "sacha",
+      "text": "Moi, je surveille d'abord les premières vraies évolutions, puisqu'on pourra enfin comparer deux semaines. Et surtout si l'écart entre Émeraude-Acier et Ambre-Émeraude se creuse, ou si les deux restent indiscernables."
+    },
+    {
+      "speaker": "camille",
+      "text": "Cet épisode est généré automatiquement à partir des statistiques de duels.ink, voix comprises. Bonne semaine de parties, et bonne chance avec la pièce."
+    }
+  ]
+}

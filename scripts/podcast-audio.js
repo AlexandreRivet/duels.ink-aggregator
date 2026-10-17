@@ -2,15 +2,18 @@
 // OpenAI's text-to-speech, one request per line in the host's voice, and assembles the episode
 // into out/podcast/episode.mp3: short pauses between lines, loudness normalised, mono 64 kb/s
 // (~2.5 MB for 5 minutes, well under Discord's attachment limit). Needs ffmpeg on the PATH.
+// The finished episode is then stored in data/episodes/ (committed, served by the site);
+// --no-store leaves it in out/podcast/ only, for trials on past weeks.
 // Env: OPENAI_API_KEY (required), PODCAST_TTS_MODEL (default gpt-4o-mini-tts).
-// Usage: npm run podcast:audio
+// Usage: npm run podcast:audio [-- --no-store]
 import { execFile } from 'node:child_process';
 import { readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
-import { promisify } from 'node:util';
+import { parseArgs, promisify } from 'node:util';
 import { HOSTS } from '../src/lib/podcast-script.js';
+import { writeEpisode } from '../src/lib/store.js';
 
 const OUT_DIR = fileURLToPath(new URL('../out/podcast/', import.meta.url));
 const MODEL = process.env.PODCAST_TTS_MODEL || 'gpt-4o-mini-tts';
@@ -26,6 +29,10 @@ const CONCURRENCY = 4;
 const ATTEMPTS = 3;
 const SHARED_TONE =
   'Tu parles en français de France, dans un podcast entre joueurs de Lorcana. Naturel, comme une vraie conversation, jamais comme une lecture.';
+
+const { values: args } = parseArgs({
+  options: { 'no-store': { type: 'boolean', default: false } },
+});
 
 const script = JSON.parse(
   await readFile(path.join(OUT_DIR, 'script.json'), 'utf8').catch(() => 'null'),
@@ -115,7 +122,13 @@ await rm(pcmFile);
 
 const seconds = pcm.length / BYTES_PER_SECOND;
 const { size } = await stat(mp3File);
-const duration = `${Math.floor(seconds / 60)}:${String(Math.round(seconds % 60)).padStart(2, '0')}`;
+const total = Math.round(seconds);
+const duration = `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 console.log(
   `${script.lines.length} lines, ${duration} → ${path.relative(process.cwd(), mp3File)} (${(size / 1e6).toFixed(1)} MB)`,
 );
+
+if (!args['no-store']) {
+  const dir = await writeEpisode(script, mp3File, { duration: seconds, voiceModel: MODEL });
+  console.log(`Stored in ${dir}/ and listed in data/episodes/index.json`);
+}

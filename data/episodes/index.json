@@ -1,0 +1,17 @@
+{
+  "episodes": [
+    {
+      "week": {
+        "startDate": "2026-10-04",
+        "endDate": "2026-10-10"
+      },
+      "title": "Set 14, premier cliché : Émeraude-Acier contre la pièce",
+      "summary": "Première semaine du Set 14 sur duels.ink : Ambre-Émeraude domine en nombre, Émeraude-Acier affiche le meilleur taux de victoire, et le premier joueur pèse très lourd en best-of-one. Camille et Sacha se disputent sur ce que les chiffres permettent vraiment de dire.",
+      "duration": 334,
+      "audio": "2026-10-04/episode.mp3",
+      "script": "2026-10-04/script.json",
+      "scriptModel": "claude-sonnet-5-5",
+      "voiceModel": "gpt-4o-mini-tts"
+    }
+  ]
+}
