@@ -138,17 +138,18 @@ Locally, `npm run post:discord` reads the webhook from `.env` (see `.env.example
 
 ## Scripts
 
-| Command                  | Purpose                                                       |
-| ------------------------ | ------------------------------------------------------------- |
-| `npm run collect`        | Stores finished weeks that are missing or have changed        |
-| `npm run digest`         | Renders one digest (images + message) per format              |
-| `npm run post:discord`   | Posts the podcast, then the charts, to Discord                |
-| `npm run podcast:script` | Writes the podcast script with Claude (`ANTHROPIC_API_KEY`)   |
-| `npm run podcast:audio`  | Reads the script aloud into an MP3 (`OPENAI_API_KEY`, ffmpeg) |
-| `npm run dev`            | Web page locally                                              |
-| `npm run build`          | Static build into `dist/`                                     |
-| `npm run check:api`      | API smoke test + payload summary                              |
-| `npm run format`         | Prettier formatting                                           |
+| Command                  | Purpose                                                           |
+| ------------------------ | ----------------------------------------------------------------- |
+| `npm run collect`        | Stores finished weeks that are missing or have changed            |
+| `npm run digest`         | Renders one digest (images + message) per format                  |
+| `npm run post:discord`   | Posts the podcast, then the charts, to Discord                    |
+| `npm run podcast:script` | Writes the podcast script with Claude (`ANTHROPIC_API_KEY`)       |
+| `npm run podcast:audio`  | Reads the script aloud into an MP3 (`OPENAI_API_KEY`, ffmpeg)     |
+| `npm run costs`          | Local API costs dashboard, never published (admin keys in `.env`) |
+| `npm run dev`            | Web page locally                                                  |
+| `npm run build`          | Static build into `dist/`                                         |
+| `npm run check:api`      | API smoke test + payload summary                                  |
+| `npm run format`         | Prettier formatting                                               |
 
 ## Notes on the data
 

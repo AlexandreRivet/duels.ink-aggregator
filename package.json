@@ -18,7 +18,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "podcast:script": "node --env-file-if-exists=.env scripts/podcast-script.js",
-    "podcast:audio": "node --env-file-if-exists=.env scripts/podcast-audio.js"
+    "podcast:audio": "node --env-file-if-exists=.env scripts/podcast-audio.js",
+    "costs": "node --env-file-if-exists=.env scripts/costs.js"
   },
   "devDependencies": {
     "prettier": "^3.6.2",
