@@ -123,15 +123,17 @@ webhook from `.env` (see `.env.example`); `-- --dry-run` prints the messages wit
 
 ## Scripts
 
-| Command                | Purpose                                                |
-| ---------------------- | ------------------------------------------------------ |
-| `npm run collect`      | Stores finished weeks that are missing or have changed |
-| `npm run digest`       | Renders one digest (images + message) per format       |
-| `npm run post:discord` | Posts each digest as its own Discord message           |
-| `npm run dev`          | Web page locally                                       |
-| `npm run build`        | Static build into `dist/`                              |
-| `npm run check:api`    | API smoke test + payload summary                       |
-| `npm run format`       | Prettier formatting                                    |
+| Command                  | Purpose                                                       |
+| ------------------------ | ------------------------------------------------------------- |
+| `npm run collect`        | Stores finished weeks that are missing or have changed        |
+| `npm run digest`         | Renders one digest (images + message) per format              |
+| `npm run post:discord`   | Posts each digest as its own Discord message                  |
+| `npm run podcast:script` | Writes the podcast script with Claude (`ANTHROPIC_API_KEY`)   |
+| `npm run podcast:audio`  | Reads the script aloud into an MP3 (`OPENAI_API_KEY`, ffmpeg) |
+| `npm run dev`            | Web page locally                                              |
+| `npm run build`          | Static build into `dist/`                                     |
+| `npm run check:api`      | API smoke test + payload summary                              |
+| `npm run format`         | Prettier formatting                                           |
 
 ## Notes on the data
 
@@ -162,7 +164,7 @@ src/config.js          settings
 src/lib/               API client, storage, computations, formatting, PNG rendering;
                        dreamborn deck reader and proxy PDF for the proxy generator
 src/charts/            d3 charts (shared by the page and the digest)
-scripts/               collection, digest, Discord posting
+scripts/               collection, digest, podcast script and audio, Discord posting
 web/                   site (Vite): homepage, common.css shared by every page, one folder per tool
 web/meta/              meta page
 web/proxies/           proxy generator

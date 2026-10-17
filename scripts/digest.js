@@ -1,5 +1,6 @@
 // Renders the weekly digests into out/digest/<format>/: one per format (bo1, bo3), for that
-// format's featured queue (see config.queues), with its images and Discord message.
+// format's featured queue (see config.queues), with its images, Discord message and the
+// podcast's facts.
 // The digest covers the last finished week, never the one in progress. A format whose queue has
 // no data for it is skipped, so a closed beta queue isn't posted again every Monday. Charts
 // without enough data are left out; with none, the card is text only.
@@ -16,6 +17,7 @@ import { themes } from '../src/charts/theme.js';
 import { config } from '../src/config.js';
 import { buildDigestCard } from '../src/lib/digest-message.js';
 import { buildReport, countsMatches } from '../src/lib/metrics.js';
+import { buildPodcastFacts } from '../src/lib/podcast-facts.js';
 import { chartRelevance } from '../src/lib/relevance.js';
 import { lastFinishedWeekEnd, pickFeaturedQueue } from '../src/lib/queues.js';
 import { createDocument, svgToPng } from '../src/lib/render-png.js';
@@ -135,6 +137,9 @@ for (const format of FORMATS) {
     options: { trendWeeks: config.digestTrendWeeks },
   });
   const digest = await renderDigest(report, trendReport, dir);
+  // The podcast script's input (npm run podcast:script)
+  const facts = buildPodcastFacts(report, chartRelevance(report));
+  await writeFile(path.join(dir, 'facts.json'), `${JSON.stringify(facts, null, 2)}\n`);
   const { title, description } = digest.card;
   const files = digest.images.map((image) => image.file).join(', ') || 'no image';
   console.log(`${title}\n${description}\n→ ${path.relative(process.cwd(), dir)}/ (${files})\n`);
