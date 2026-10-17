@@ -7,7 +7,19 @@
       },
       "title": "Set 14, premier cliché : Émeraude-Acier contre la pièce",
       "summary": "Première semaine du Set 14 sur duels.ink : Ambre-Émeraude domine en nombre, Émeraude-Acier affiche le meilleur taux de victoire, et le premier joueur pèse très lourd en best-of-one. Camille et Sacha se disputent sur ce que les chiffres permettent vraiment de dire.",
-      "duration": 334,
+      "formats": [
+        {
+          "format": "bo1",
+          "queue": "core-bo1@set-14-core",
+          "queueName": "Core Set 14 BO1"
+        },
+        {
+          "format": "bo3",
+          "queue": "core-bo3@set-14-core",
+          "queueName": "Core Set 14 BO3"
+        }
+      ],
+      "duration": 326,
       "audio": "2026-10-04/episode.mp3",
       "script": "2026-10-04/script.json",
       "scriptModel": "claude-sonnet-5-5",

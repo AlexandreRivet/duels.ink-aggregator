@@ -100,9 +100,17 @@ function trimSilence(clip) {
 }
 
 const pause = Buffer.alloc(Math.round(PAUSE_SECONDS * SAMPLE_RATE) * 2);
-const pcm = Buffer.concat(
-  clips.map(trimSilence).flatMap((clip, i) => (i ? [pause, clip] : [clip])),
-);
+const trimmed = clips.map(trimSilence);
+const pcm = Buffer.concat(trimmed.flatMap((clip, i) => (i ? [pause, clip] : [clip])));
+
+// When each line is heard, for the site's transcript that follows the audio
+let offset = 0;
+const timedLines = script.lines.map((line, i) => {
+  const start = offset;
+  const end = start + trimmed[i].length / BYTES_PER_SECOND;
+  offset = end + PAUSE_SECONDS;
+  return { ...line, start: Math.round(start * 100) / 100, end: Math.round(end * 100) / 100 };
+});
 const pcmFile = path.join(OUT_DIR, 'episode.pcm');
 const mp3File = path.join(OUT_DIR, 'episode.mp3');
 await writeFile(pcmFile, pcm);
@@ -129,6 +137,9 @@ console.log(
 );
 
 if (!args['no-store']) {
-  const dir = await writeEpisode(script, mp3File, { duration: seconds, voiceModel: MODEL });
+  const dir = await writeEpisode({ ...script, lines: timedLines }, mp3File, {
+    duration: seconds,
+    voiceModel: MODEL,
+  });
   console.log(`Stored in ${dir}/ and listed in data/episodes/index.json`);
 }

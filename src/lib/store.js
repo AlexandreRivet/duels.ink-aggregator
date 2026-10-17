@@ -75,6 +75,7 @@ export async function writeEpisode(script, audioFile, details) {
     week: script.week,
     title: script.title,
     summary: script.summary,
+    formats: script.formats ?? [],
     duration: Math.round(details.duration),
     audio: `${startDate}/episode.mp3`,
     script: `${startDate}/script.json`,

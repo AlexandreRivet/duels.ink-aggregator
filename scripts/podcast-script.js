@@ -95,6 +95,12 @@ if (unsupported.length) {
 await mkdir(OUT_DIR, { recursive: true });
 const result = {
   week: { startDate: week.startDate, endDate: week.endDate },
+  // The queues the episode covers, for the site's links to their meta page
+  formats: summary.rendered.map(({ format, queue }, i) => ({
+    format,
+    queue,
+    queueName: formats[i].queueName,
+  })),
   model: MODEL,
   ...script,
 };
