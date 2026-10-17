@@ -129,7 +129,7 @@ webhook from `.env` (see `.env.example`); `-- --dry-run` prints the messages wit
 | ------------------------ | ------------------------------------------------------------- |
 | `npm run collect`        | Stores finished weeks that are missing or have changed        |
 | `npm run digest`         | Renders one digest (images + message) per format              |
-| `npm run post:discord`   | Posts each digest as its own Discord message                  |
+| `npm run post:discord`   | Posts the podcast, then the charts, to Discord                |
 | `npm run podcast:script` | Writes the podcast script with Claude (`ANTHROPIC_API_KEY`)   |
 | `npm run podcast:audio`  | Reads the script aloud into an MP3 (`OPENAI_API_KEY`, ffmpeg) |
 | `npm run dev`            | Web page locally                                              |
